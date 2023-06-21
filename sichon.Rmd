@@ -1,0 +1,2485 @@
+---
+title: "Sichon AES Supporting Material"
+author: "AES Technical"
+date: "`r Sys.Date()`"
+output:
+  bookdown::html_document2:
+     fig_caption: yes
+     number_sections: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+```
+
+```{r libraries}
+# import libraries
+library(tidyverse)
+library(broom)
+library(flextable)
+library(kableExtra)
+library(officer)
+library(knitr)
+library(lubridate)
+library(skimr)
+```
+
+``` {r importDataWaterQuality}
+
+# import data
+water.quality.23 <- read.csv("data/water_quality.csv")
+water.quality.bacteria.23 <- read.csv("data/water_quality_bacteria.csv")
+
+# mutate dates
+water.quality.23 <- water.quality.23 %>%
+  mutate(date = dmy(date))
+
+
+water.quality.bacteria.23 <- water.quality.bacteria.23 %>%
+  mutate(date = dmy(date))
+
+water.quality23.join <- full_join(water.quality.23, water.quality.bacteria.23,
+                                  by = c("date", "unit", "tank"))
+
+water.quality23.innerjoin <- inner_join(water.quality.23, water.quality.bacteria.23,
+                                  by = c("date", "unit", "tank"))
+
+```
+
+``` {r importData23}
+
+# import and clean 23 sample site data
+samples_23 <- read.csv("data/samples_23.csv")
+
+samples_23 <- samples_23 %>%
+  mutate(across("tss", str_replace, "<", ""),
+         across("tss", str_replace, "Not Deteched", "0"),
+         tss = as.numeric(tss),
+         across("chlorine", str_replace, "Not Deteched", "0"),
+         chlorine = as.numeric(chlorine)) 
+```
+
+``` {r importDataEffluent}
+
+effluent <- read.csv("data/effluent.csv")
+
+```
+
+``` {r importFeedLoading}
+
+nursery.feed.composition <- read.csv("data/nursery_feed_composition.csv")
+
+nursery.feed.input <- read.csv("data/nursery_feed_input.csv")
+
+maturation.feed.input <- read.csv("data/maturation_feed_input.csv")
+
+```
+
+``` {r exchangeWater}
+
+nursery.exchange <- read.csv("data/nursery_exchange.csv")
+```
+
+``` {r productionPlans}
+
+nursery.prod <- read.csv("data/nursery_prod.csv")
+```
+
+
+# Deliverables
+
+* Review and summarise water quality data for nursery, maturation unit and water treatment areas
+* Model feed inputs and determine expected water exchange requirements - compare to reported exchange rates
+* Perform literature review to identify best-practise water-sterilisation for Vibrio species identified
+* Review growth data, compare and contrast with existing growth data from Fellsmere
+
+***
+
+# Water Quality Data
+
+A data set of water quality parameters was supplied covering the period `r min(water.quality23.join$date)` to `r max(water.quality23.join$date)`, a total of `r max(water.quality23.join$date) - min(water.quality23.join$date)` days.
+
+Sichon has been subdivided into various departments described as: Water system, Nursery and Maturation.  
+
+Water quality data will be summarised for each of the three main areas using summary statistics of data supplied by SyAqua to identify any areas of concern. These will then be investigated in greater detail as required.
+
+Water quality data has been subdivided into physical and biological variables.
+
+Physical parameters:
+
+* pH
+* Salinity (ppt)
+* Alkalinity (ppm)
+* TAN (ppm - equivalent to mg/l)
+* NH~4~ (ppm)
+* NH~3~ (ppm)
+* NO~2~^-^ (ppm)
+* DO (ppm)
+* Temp ^o^C
+* Clr (ppm)
+* Ca^2+^ (ppm)
+* Mg^2+^ (ppm)
+
+Biological parameters:
+
+* Green vibrio count
+* Yellow vibrio count
+* Total vibrio count
+* Luminescent bacteria
+* H~2~S producing bacteria discounted as results indicate zero presence
+
+Water quality parameters ranges have been classified using a traffic light scheme of green, amber and red to indicate whether the variable is within acceptable limits. These limits are dependent upon the department. Comments will be made for each variable within each department highlighting if the variable is seen to be within the green,  amber or red classifications. Where occurunces are observed above optimal conditions, number of occurrences will be reported - each occurrence represents one tank day, although realistically each variable measured represents a snapshot of the conditions on any given day due to the potential for rapid change in water quality parameters/ bacterial counts. 
+
+## Water System
+
+### Water Quality Physical Parameters
+
+Note that DO and temperature have been excluded from the table as data does not appear to include these variables. The columns p0 - p100 indicate the range of data and the interquartile values, p50 therefore indicates the median value and is likely to be a more representative average value than the mean (which may be influenced to a greater degree by extreme values).
+
+``` {r skimWaterQualityPhysicalWS}
+
+# summarise water quality data
+# tan
+wqp.wsystem.summary <- water.quality23.join %>%
+  filter(department.x == "Water System") %>%
+  skim(ph, salinity, alkalinity, tan, nh4, nh3, no2, clr, ca2, mg2) %>%
+  select(-c(skim_type, n_missing, complete_rate))
+```
+
+``` {r wqPhysicalWsystemTable, ft.align="center"}
+
+wqp.wsystem.summary %>%
+  flextable() %>%
+  set_header_labels(skim_variable = "Variable", n_missing = "Missing Data", complete_rate = "Complete rate", numeric.mean = "Mean", numeric.sd = "SD", numeric.p0 = "p0", numeric.p25 = "p25", numeric.p50 = "p50", numeric.p75 = "p75", numeric.p100 = "p100", numeric.hist = "hist") %>%
+  colformat_double(digits = 2) %>%
+  autofit() %>%
+  fit_to_width(7.5) %>%
+set_caption(caption = as_paragraph("Physical water quality summary statistics for Water System area"), 
+  style = "Table Caption", 
+  autonum = run_autonum(seq_id = "tab", bkm = "tab1"))
+```
+
+#### pH
+
+``` {r waterSystempH}
+
+# filter to fine out number of occurrances of above level ph results 
+ws.ph.green <- water.quality23.join %>%
+  filter(department.x == "Water System" & between(ph, 8.0, 8.4)) %>%
+  select(ph)
+
+ws.ph.amber <- water.quality23.join %>%
+  filter(department.x == "Water System" & between(ph, 8.5, 8.8) | department.x == "Water System" & between(ph, 7.1, 7.9)) %>%
+  select(ph)
+
+ws.ph.red <- water.quality23.join %>%
+  filter(department.x == "Water System" & ph < 7.0 | department.x == "Water System" & ph > 8.9) %>%
+  select(ph)
+
+```
+
+pH; green 8.0-8.4, amber 7.1-7.9 or 8.5-8.8, red <7.0 or >8.9. Within the water system pH appears to be well controlled, 75% of the values are within the green classification, 25% of the values are within the amber classification.
+
+Occurrences of pH within green classification range in Water system: `r length(ws.ph.green$ph)`
+
+Occurrences of pH within amber classification range in Water system: `r length(ws.ph.amber$ph)`
+
+Occurrences of pH within red classification range in Water system: `r length(ws.ph.red$ph)`
+
+``` {r systemTankPh}
+
+system.tank.ph.skim <- water.quality23.join %>%
+  filter(department.x == "Water System"  & !is.na(ph)) %>%
+  group_by(tank) %>%
+  skim(ph)
+```
+
+Similar pH levels within all reservoir tanks. See appendix for summary data.
+
+``` {r systemTankR1ph, fig.cap = "Sichon water system tank R1 pH time series", fig.align = "center", fig.dim = c(8,3), dpi = 200}
+
+system.tankR1.ph.p <- water.quality23.join %>%
+  filter(department.x == "Water System" & tank == "R1" & !is.na(ph)) %>%
+  ggplot(aes(date, ph)) +
+  geom_rect(aes(xmin = min(water.quality23.join$date), xmax = max(water.quality23.join$date), ymin = 8, ymax = 8.4),
+            alpha = 1/5,
+            fill = "lightgreen") +
+  geom_hline(yintercept = c(7.1, 8.0, 8.4, 8.8), linetype = c("dashed"),
+             color = c("orange","orange", "orange", "orange"), size = 1.0) +
+  geom_line() +
+  geom_point(size = 0.5) +
+  xlab("Date") +
+  ylab("pH") +
+  theme_minimal()
+
+system.tankR1.ph.p
+```
+
+#### Salinity
+
+Salinity range not defined by traffic light system, appears to be within suitable range for shrimp.
+
+#### Alkalinity
+
+``` {r waterSystemAlk}
+
+# filter to fine out number of occurrances of above level alk results 
+ws.alk.green <- water.quality23.join %>%
+  filter(department.x == "Water System" & between(alkalinity, 120, 140)) %>%
+  select(alkalinity)
+
+ws.alk.amber <- water.quality23.join %>%
+  filter(department.x == "Water System" & between(alkalinity, 110, 119) | department.x == "Water System" & between(alkalinity, 141, 150)) %>%
+  select(alkalinity)
+
+ws.alk.red <- water.quality23.join %>%
+  filter(department.x == "Water System" & alkalinity < 110 & !is.na(alkalinity) | department.x == "Water System" & alkalinity > 150) %>%
+  select(alkalinity)
+
+```
+
+Alkalinity; green 120-140, amber 110-119 or 141-150, red <110 or >150. Median alkalinity higher than optimal (153). Action likely to be required to maintain optimal range.
+
+Occurrences of alkalinity within green classification range in Water system: `r length(ws.alk.green$alkalinity)`
+
+Occurrences of alkalinity within amber classification range in Water system: `r length(ws.alk.amber$alkalinity)`
+
+Occurrences of alkalinity within red classification range in Water system: `r length(ws.alk.red$alkalinity)`
+
+``` {r systemTankAlk}
+
+system.tank.alk.skim <- water.quality23.join %>%
+  filter(department.x == "Water System"  & !is.na(alkalinity)) %>%
+  group_by(tank) %>%
+  skim(alkalinity)
+```
+
+Similar alkalinity levels within all reservoir tanks. See appendix for summary data.
+
+``` {r systemTankR1alk, fig.cap = "Sichon water system tank R1 alkalinity time series", fig.align = "center", fig.dim = c(8,3), dpi = 200}
+
+system.tankR1.alk.p <- water.quality23.join %>%
+  filter(department.x == "Water System" & tank == "R1" & !is.na(alkalinity)) %>%
+  ggplot(aes(date, alkalinity)) +
+  geom_rect(aes(xmin = min(water.quality23.join$date), xmax = max(water.quality23.join$date), ymin = 120, ymax = 140),
+            alpha = 1/5,
+            fill = "lightgreen") +
+  geom_hline(yintercept = c(110, 120, 140, 180), linetype = c("dashed"),
+             color = c("orange","orange", "orange", "orange"), size = 1.0) +
+  geom_line() +
+  geom_point(size = 0.5) +
+  xlab("Date") +
+  ylab("Alkalinity (mg/l)") +
+  theme_minimal()
+
+system.tankR1.alk.p
+```
+
+#### TAN
+
+``` {r waterSystemTAN}
+
+# filter to fine out number of occurrances of above level alk results 
+ws.tan.green <- water.quality23.join %>%
+  filter(department.x == "Water System" & tan < 1 & !is.na(tan)) %>%
+  select(tan)
+
+ws.tan.amber <- water.quality23.join %>%
+  filter(department.x == "Water System" & between(tan, 1, 3)) %>%
+  select(tan)
+
+ws.tan.red <- water.quality23.join %>%
+  filter(department.x == "Water System" & tan > 3) %>%
+  select(tan)
+
+```
+
+TAN; green <1, amber 1.1-3, red >3. TAN range of 1.0-<1.1 not defined in classification range; amber range modified to 1 - 3 for this analysis. TAN typically within desired range.
+
+Occurrences of TAN within green classification range in Water system: `r length(ws.tan.green$tan)`
+
+Occurrences of TAN within amber classification range in Water system: `r length(ws.tan.amber$tan)`
+
+Occurrences of TAN within red classification range in Water system: `r length(ws.tan.red$tan)`
+
+``` {r systemTankTAN}
+
+system.tank.tan.skim <- water.quality23.join %>%
+  filter(department.x == "Water System"  & !is.na(tan)) %>%
+  group_by(tank) %>%
+  skim(tan)
+```
+
+Reservoir tank R4 shows highest TAN level result (single data point).
+
+``` {r systemTankR1Tan, fig.cap = "Sichon water system tank R4 TAN time series", fig.align = "center", fig.dim = c(8,3), dpi = 200}
+
+system.tankR1.tan.p <- water.quality23.join %>%
+  filter(department.x == "Water System" & tank == "R4" & !is.na(tan)) %>%
+  ggplot(aes(date, tan)) +
+  geom_rect(aes(xmin = min(water.quality23.join$date), xmax = max(water.quality23.join$date), ymin = 0, ymax = 1),
+            alpha = 1/5,
+            fill = "lightgreen") +
+  geom_hline(yintercept = c(1, 3), linetype = c("dashed"),
+             color = c("orange"), size = 1.0) +
+  geom_line() +
+  geom_point(size = 0.5) +
+  xlab("Date") +
+  ylab("TAN (mg/l)") +
+  theme_minimal()
+
+system.tankR1.tan.p
+```
+
+#### NH~3~
+
+NH~3~; green <0.16, amber 0.17-0.3, red >0.3. Classification not defined for values 0.16- <0.17, amber range modified to 0.16-0.3 for the purposes of this analysis. NH~3~ within desired range.
+
+#### NO~2~
+
+NO~2~; green <0.5, amber 0.51-0.8, red >0.8. Amber classification modified to 0.5-0.8 for the purposes of this analysis. NO~2~ within desired range.
+
+#### Chlorine
+
+``` {r waterSystemclr}
+
+# filter to fine out number of occurrances of above level alk results 
+ws.clr.green <- water.quality23.join %>%
+  filter(department.x == "Water System" & clr <= 0.48 & !is.na(clr)) %>%
+  select(clr)
+
+ws.clr.red <- water.quality23.join %>%
+  filter(department.x == "Water System" & clr > 0.48) %>%
+  select(clr)
+
+```
+
+Clr range not defined by traffic light system. A quick literature search indicates safe levels of residual chlorine to be 0.24mg/l, 0.48mg/l and 0.57mg/l at salinities of 15ppt, 25ppt and 35ppt respectively. Levels typically appropriate, but check with neutralisation protocol to ensure this. (Cheng S-Y et al. 2013. Acute toxicity of residual chlorine on the white shrimp Litopeneaus vannamei juveniles at different salinity levels. J. Fish. Soc. Taiwan, 40(3): 183-191.)
+
+Occurrences of clr within recommended range in Water system: `r length(ws.clr.green$clr)`
+
+Occurrences of clr above recommended range in Water system: `r length(ws.clr.red$clr)`
+
+``` {r systemTankClr}
+
+system.tank.clr.skim <- water.quality23.join %>%
+  filter(department.x == "Water System"  & !is.na(clr)) %>%
+  group_by(tank) %>%
+  skim(clr)
+```
+
+Reservoir tanks R1 and R2 show higher residual chlorine than R4 and R5.
+
+``` {r systemTankR1Clr, fig.cap = "Sichon water system tank R1 Chlorine time series", fig.align = "center", fig.dim = c(8,3), dpi = 200}
+
+system.tankR1.clr.p <- water.quality23.join %>%
+  filter(department.x == "Water System" & tank == "R1" & !is.na(clr)) %>%
+  ggplot(aes(date, clr)) +
+  geom_rect(aes(xmin = min(water.quality23.join$date), xmax = max(water.quality23.join$date), ymin = 0, ymax = 0.48),
+            alpha = 1/5,
+            fill = "lightgreen") +
+  geom_hline(yintercept = c(0.48), linetype = c("dashed"),
+             color = c("orange"), size = 1.0) +
+  geom_line() +
+  geom_point(size = 0.5) +
+  xlab("Date") +
+  ylab("Chlorine (mg/l)") +
+  theme_minimal()
+
+system.tankR1.clr.p
+```
+
+#### Calcium / Magnesium
+
+Ca~2~: Mg~2~ ratio; this ratio seems to have been seldom calculated in the data supplied. In the trafic light scheme it is reported as Ca:Mg green >3, amber 2-2.9, red <1.9. A quick review of the literature indicates that Mg:Ca ratio of 3:1 is recommended for better survival and growth when cultured in low salinity water (Aruna S and Felix S  2017. The effect of ionic concentration of low saline waters on growth characteristics of Peneaus Vannamei. International Journal of Fisheries and Aquatic Studies, 5(3): 73-76.) Please check with protocol to ensure correct calculation and appropriate action.
+
+***
+
+### Water Quality Biological Parameters
+
+``` {r skimWaterQualityBiologicalWS}
+
+# summarise water quality data
+# tan
+wqb.wsystem.summary <- water.quality23.join %>%
+  filter(department.x == "Water System") %>%
+  skim(gvc, yvc, tvc, lb) %>%
+  select(-c(skim_type, n_missing, complete_rate))
+```
+
+``` {r wqBiologicalWsystemTable, ft.align="center"}
+
+wqb.wsystem.summary %>%
+  flextable() %>%
+  set_header_labels(skim_variable = "Variable", n_missing = "Missing Data", complete_rate = "Complete rate", numeric.mean = "Mean", numeric.sd = "SD", numeric.p0 = "p0", numeric.p25 = "p25", numeric.p50 = "p50", numeric.p75 = "p75", numeric.p100 = "p100", numeric.hist = "hist") %>%
+  colformat_double(digits = 2) %>%
+  autofit() %>%
+  fit_to_width(7.5) %>%
+set_caption(caption = as_paragraph("Biological water quality summary statistics for Water System area"), 
+  style = "Table Caption", 
+  autonum = run_autonum(seq_id = "tab"))
+```
+#### Green vibrio
+
+``` {r waterSystemGVC}
+
+# filter to fine out number of occurrances of above level bacti results gvc
+water.system.gvc.green <- water.quality23.join %>%
+  filter(department.y == "Water System" & gvc <80 & !is.na(gvc))
+
+water.system.gvc.amber <- water.quality23.join %>%
+  filter(department.y == "Water System" & gvc >= 80 & gvc <= 100)
+
+water.system.gvc.red <- water.quality23.join %>%
+  filter(department.y == "Water System" & gvc >100)
+```
+
+Green vibrio count; green <80 CFU/ml, amber 80-100 CFU/ml, red >100 CFU/ml. 75% of the results are within the green classification. 
+
+Occurrences of GVC within green classification range in Water system: `r length(water.system.gvc.green$gvc)`
+
+Occurrences of GVC within amber classification range in Water system: `r length(water.system.gvc.amber$gvc)`
+
+Occurrences of GVC within red classification range in Water system: `r length(water.system.gvc.red$gvc)`
+
+``` {r systemTankGVC}
+
+system.tank.gvc.skim <- water.quality23.join %>%
+  filter(department.y == "Water System"  & !is.na(gvc)) %>%
+  group_by(tank) %>%
+  skim(gvc)
+```
+
+Slightly higher vibrio counts from R1 and R2 than R3 and R4, but overall low. 
+
+``` {r systemTankR1GVC, fig.cap = "Sichon water system tank R1 GVC time series", fig.align = "center", fig.dim = c(8,3), dpi = 200}
+
+system.tankR1.gvc.p <- water.quality23.join %>%
+  filter(department.y == "Water System" & tank == "R1" & !is.na(gvc)) %>%
+  ggplot(aes(date, gvc)) +
+  geom_rect(aes(xmin = min(water.quality23.join$date), xmax = max(water.quality23.join$date), ymin = 0, ymax = 80),
+            alpha = 1/5,
+            fill = "lightgreen") +
+  geom_hline(yintercept = c(80, 100), linetype = c("dashed"),
+             color = c("orange"), size = 1.0) +
+  geom_line() +
+  geom_point(size = 0.5) +
+  xlab("Date") +
+  ylab("GVC (CFU/ml)") +
+  theme_minimal()
+
+system.tankR1.gvc.p
+```
+
+#### Yellow vibrio
+
+``` {r waterSystemYVC}
+
+# filter to fine out number of occurrances of above level bacti results yvc
+water.system.yvc.green <- water.quality23.join %>%
+  filter(department.y == "Water System" & yvc < 1000 & !is.na(yvc)) %>%
+  select(yvc)
+
+water.system.yvc.amber <- water.quality23.join %>%
+  filter(department.y == "Water System" & yvc >= 1000 & yvc <= 10000) %>%
+  select(yvc)
+
+water.system.yvc.red <- water.quality23.join %>%
+  filter(department.y == "Water System" & yvc >= 10000) %>%
+  select(yvc)
+```
+
+Yellow vibrio count; green <1000 CFU/ml, amber 1000-10,000 CFU/ml, red >100,000 CFU/ml. Why is there a gap between 10,000 and 100,000 in terms of the traffic light system? 75% of results within green classification, highest result in amber classification. Red classification changed to >10,000 for the purposes of this analysis.
+
+Occurrences of YVC within green classification range `r length(water.system.yvc.green$yvc)`
+
+Occurrences of YVC within amber classification range `r length(water.system.yvc.amber$yvc)`
+
+Occurrences of YVC within red classification range `r length(water.system.yvc.red$yvc)`
+
+``` {r systemTankYVC}
+
+system.tank.yvc.skim <- water.quality23.join %>%
+  filter(department.y == "Water System"  & !is.na(yvc)) %>%
+  group_by(tank) %>%
+  skim(yvc)
+```
+
+Similar yellow vibrio count profiles btween all tanks.
+
+``` {r systemTankR1Yvc, fig.cap = "Sichon water system tank R4 YVC time series", fig.align = "center", fig.dim = c(8,3), dpi = 200}
+
+system.tankR4.yvc.p <- water.quality23.join %>%
+  filter(department.y == "Water System" & tank == "R4" & !is.na(yvc)) %>%
+  ggplot(aes(date, yvc)) +
+  geom_rect(aes(xmin = min(water.quality23.join$date), xmax = max(water.quality23.join$date), ymin = 0, ymax = 1000),
+            alpha = 1/5,
+            fill = "lightgreen") +
+  geom_hline(yintercept = c(1000, 10000), linetype = c("dashed"),
+             color = c("orange"), size = 1.0) +
+  geom_line() +
+  geom_point(size = 0.5) +
+  xlab("Date") +
+  ylab("YVC (CFU/ml)") +
+  theme_minimal()
+
+system.tankR4.yvc.p
+```
+
+#### Total vibrio
+
+Total vibrio count not classified by traffic light system and discounted due to relative importance of lower green vibrio count requirement.
+
+#### Luminescent bacteria
+
+Luminescent bacteria; not classified by traffic light system, classified in monthly reporting as ranges of 100-1000 CFU/ml, 1001-30,000 CFU/ml and > 30,000 CFU/ml. No bacteria of this class identified within this department.
+
+***
+
+## Nursery
+
+### Water Quality Physical Parameters
+Note that Clr, Ca~2~ and Mg~2~ have been excluded from the table as data does not appear to include these variables. The columns p0 - p100 indicate the range of data and the interquartile values, p50 therefore indicates the median value and is likely to be a more representative average value than the mean (which may be influenced to a greater degree by extreme values).
+
+``` {r skimWaterQualityPhysicalN}
+
+# summarise water quality data
+# tan
+wqp.nursery.summary <- water.quality23.join %>%
+  filter(department.x == "Nursery") %>%
+  skim(ph, salinity, alkalinity, tan, nh4, nh3, no2, do, temp) %>%
+  select(-c(skim_type, n_missing, complete_rate))
+```
+
+``` {r wqPhysicalNurseryTable, ft.align="center"}
+
+wqp.nursery.summary %>%
+  flextable() %>%
+  set_header_labels(skim_variable = "Variable", n_missing = "Missing Data", complete_rate = "Complete rate", numeric.mean = "Mean", numeric.sd = "SD", numeric.p0 = "p0", numeric.p25 = "p25", numeric.p50 = "p50", numeric.p75 = "p75", numeric.p100 = "p100", numeric.hist = "hist") %>%
+  colformat_double(digits = 2) %>%
+  autofit() %>%
+  fit_to_width(7.5) %>%
+set_caption(caption = as_paragraph("Physical water quality summary statistics for Nursery area"), 
+  style = "Table Caption", 
+  autonum = run_autonum(seq_id = "tab"))
+```
+
+#### pH
+
+``` {r nurserypH}
+
+# filter to fine out number of occurrances of above level ph results 
+nursery.ph.green <- water.quality23.join %>%
+  filter(department.x == "Nursery" & between(ph, 8.0, 8.4)) %>%
+  select(ph)
+
+nursery.ph.amber <- water.quality23.join %>%
+  filter(department.x == "Nursery" & between(ph, 8.5, 8.8) | department.x == "Nursery" & between(ph, 7.1, 7.9)) %>%
+  select(ph)
+
+nursery.ph.red <- water.quality23.join %>%
+  filter(department.x == "Nursery" & ph < 7.0 | department.x == "Nursery" & ph > 8.9) %>%
+  select(ph)
+
+```
+
+pH; green 8.0-8.4, amber 7.1-7.9 or 8.5-8.8, red <7.0 or >8.9. Greater than 75% of results within the green classification, small proportion of results within the amber classification.
+
+Occurrences of pH within green classification range in Nursery: `r length(nursery.ph.green$ph)`
+
+Occurrences of pH within amber classification range in Nursery: `r length(nursery.ph.amber$ph)`
+
+Occurrences of pH within red classification range in Nursery: `r length(nursery.ph.red$ph)`
+
+``` {r nurseryTankPh}
+
+nursery.tank.ph.skim <- water.quality23.join %>%
+  filter(department.x == "Nursery"  & !is.na(ph)) %>%
+  group_by(tank) %>%
+  skim(ph)
+
+```
+
+pH seems at similar levels among tanks, median pH in each tank 8.3. Summary table of nursery tank pH in appendix.
+
+``` {r nurseryTank1ph, fig.cap = "Sichon nursery tank 1 pH time series", fig.align = "center", fig.dim = c(8,3), dpi = 200}
+
+nursery.tank1.ph.p <- water.quality23.join %>%
+  filter(department.x == "Nursery" & tank == "1" & !is.na(ph)) %>%
+  ggplot(aes(date, ph)) +
+  geom_rect(aes(xmin = min(water.quality23.join$date), xmax = max(water.quality23.join$date), ymin = 8, ymax = 8.4),
+            alpha = 1/5,
+            fill = "lightgreen") +
+  geom_hline(yintercept = c(7.1, 8.0, 8.4, 8.8), linetype = c("dashed"),
+             color = c("orange"), size = 1.0) +
+  geom_line() +
+  geom_point(size = 0.5) +
+  xlab("Date") +
+  ylab("pH") +
+  theme_minimal()
+
+nursery.tank1.ph.p
+```
+
+#### Salinity
+
+Salinity range not defined by traffic light system, appears to be within suitable range for shrimp.
+
+#### Alkalinity
+
+``` {r nurseryAlk}
+
+# filter to fine out number of occurrances of above level alk results 
+nursery.alk.green <- water.quality23.join %>%
+  filter(department.x == "Nursery" & between(alkalinity, 150, 200)) %>%
+  select(alkalinity)
+
+nursery.alk.amber <- water.quality23.join %>%
+  filter(department.x == "Nursery" & between(alkalinity, 110, 149) | department.x == "Nursery" & between(alkalinity, 201, 240)) %>%
+  select(alkalinity)
+
+nursery.alk.red <- water.quality23.join %>%
+  filter(department.x == "Nursery" & alkalinity < 110 & !is.na(alkalinity) | department.x == "Nursery" & alkalinity > 240) %>%
+  select(alkalinity)
+
+```
+
+Alkalinity; green 150-200, amber 110-149 or 201-240, red <110 or >240. Less than 50% of results within the green classification, alkalinity appears to be higher than desired for a large proportion of the time. Alkalinity stress may result in lower growth rates and down-regulation of immune related genes.
+
+Occurrences of alkalinity within green classification range in Nursery: `r length(nursery.alk.green$alkalinity)`
+
+Occurrences of alkalinity within amber classification range in Nursery: `r length(nursery.alk.amber$alkalinity)`
+
+Occurrences of alkalinity within red classification range in Nursery: `r length(nursery.alk.red$alkalinity)`
+
+``` {r nurseryTankAlk}
+
+nursery.tank.alk.skim <- water.quality23.join %>%
+  filter(department.x == "Nursery"  & !is.na(alkalinity)) %>%
+  group_by(tank) %>%
+  skim(alkalinity)
+```
+
+Alkalinity at similar levels among tanks. Summary table of nursery tank alkalinity in appendix. 
+
+``` {r nurseryTank1alk, fig.cap = "Sichon water nursery tank 1 alkalinity time series", fig.align = "center", fig.dim = c(8,3), dpi = 200}
+
+nursery.tank1.alk.p <- water.quality23.join %>%
+  filter(department.x == "Nursery" & tank == "1" & !is.na(alkalinity)) %>%
+  ggplot(aes(date, alkalinity)) +
+  geom_rect(aes(xmin = min(water.quality23.join$date), xmax = max(water.quality23.join$date), ymin = 150, ymax = 200),
+            alpha = 1/5,
+            fill = "lightgreen") +
+  geom_hline(yintercept = c(110, 150, 200, 240), linetype = c("dashed"),
+             color = c("orange"), size = 1.0) +
+  geom_line() +
+  geom_point(size = 0.5) +
+  xlab("Date") +
+  ylab("Alkalinity (mg/l)") +
+  theme_minimal()
+
+nursery.tank1.alk.p
+```
+
+#### TAN
+
+``` {r nurseryTAN}
+
+# filter to fine out number of occurrances of above level TAN results 
+nursery.tan.green <- water.quality23.join %>%
+  filter(department.x == "Nursery" & tan < 1 & !is.na(tan)) %>%
+  select(tan)
+
+nursery.tan.amber <- water.quality23.join %>%
+  filter(department.x == "Nursery" & between(tan, 1, 3)) %>%
+  select(tan)
+
+nursery.tan.red <- water.quality23.join %>%
+  filter(department.x == "Nursery" & tan > 3) %>%
+  select(tan)
+
+```
+
+TAN; green <1, amber 1.1-3, red >3. TAN range of 1.0-<1.1 not defined in classification range; amber range modified to 1 - 3 for this analysis. Less than 20% of the results within the green classification and 50% of the results within the red classification. Cause for concern, investigate in greater detail.
+
+Occurrences of TAN within green classification range in Nursery: `r length(nursery.tan.green$tan)`
+
+Occurrences of TAN within amber classification range in Nursery: `r length(nursery.tan.amber$tan)`
+
+Occurrences of TAN within red classification range in Nursery: `r length(nursery.tan.red$tan)`
+
+``` {r nurseryTankTAN}
+
+nursery.tank.tan.skim <- water.quality23.join %>%
+  filter(department.x == "Nursery"  & !is.na(tan)) %>%
+  group_by(tank) %>%
+  skim(tan)
+```
+
+TAN at similar elevated levels among tanks. Summary table of nursery tank TAN in appendix.
+
+``` {r nurseryTank1Tan, fig.cap = "Sichon nursery tank 1 TAN time series", fig.align = "center", fig.dim = c(8,3), dpi = 200}
+
+nursery.tank1.tan.p <- water.quality23.join %>%
+  filter(department.x == "Nursery" & tank == "1" & !is.na(tan)) %>%
+  ggplot(aes(date, tan)) +
+  geom_rect(aes(xmin = min(water.quality23.join$date), xmax = max(water.quality23.join$date), ymin = 0, ymax = 1),
+            alpha = 1/5,
+            fill = "lightgreen") +
+  geom_hline(yintercept = c(1, 3), linetype = c("dashed"),
+             color = c("orange"), size = 1.0) +
+  geom_line() +
+  geom_point(size = 0.5) +
+  xlab("Date") +
+  ylab("TAN (mg/l)") +
+  theme_minimal()
+
+nursery.tank1.tan.p
+```
+
+#### NH~3~
+
+``` {r nurseryNH3}
+
+# filter to find out number of occurrances of above level NH3 results 
+nursery.nh3.green <- water.quality23.join %>%
+  filter(department.x == "Nursery" & nh3 < 0.16 & !is.na(nh3)) %>%
+  select(nh3)
+
+nursery.nh3.amber <- water.quality23.join %>%
+  filter(department.x == "Nursery" & between(nh3, 0.16, 0.3)) %>%
+  select(nh3)
+
+nursery.nh3.red <- water.quality23.join %>%
+  filter(department.x == "Nursery" & nh3 > 0.3) %>%
+  select(nh3)
+
+```
+
+NH~3~; green <0.16, amber 0.17-0.3, red >0.3. Classification not defined for values 0.16- <0.17, amber range modified to 0.16-0.3 for the purposes of this analysis. Less than 25% of results within green classification, greater than 50% of results within red classification. Salinity impacts toxicity of NH~3~, 24, 48, 72, 96h LC50 values considered at 25ppt salinity considered to be 2.93, 2.16, 1.91, 1.57 mg/l. Upper value of 6.2 may be made in error. Ammonia management is required, depression in immune response due to ammonia stress may increase susceptibility to vibrio.
+
+Occurrences of NH~3~ within green classification range in Nursery: `r length(nursery.nh3.green$nh3)`
+
+Occurrences of NH~3~ within amber classification range in Nursery: `r length(nursery.nh3.amber$nh3)`
+
+Occurrences of NH~3~ within red classification range in Nursery: `r length(nursery.nh3.red$nh3)`
+
+``` {r nurseryTankNH3}
+
+nursery.tank.nh3.skim <- water.quality23.join %>%
+  filter(department.x == "Nursery"  & !is.na(nh3)) %>%
+  group_by(tank) %>%
+  skim(nh3)
+```
+
+NH~3~ at similar elevated levels among tanks. Summary table of nursery tank NH~3~ in appendix.
+
+``` {r nurseryTank1NH3, fig.cap = "Sichon nursery tank 1 NH~3~ time series", fig.align = "center", fig.dim = c(8,3), dpi = 200}
+
+nursery.tank1.nh3.p <- water.quality23.join %>%
+  filter(department.x == "Nursery" & tank == "1" & !is.na(nh3)) %>%
+  ggplot(aes(date, nh3)) +
+  geom_rect(aes(xmin = min(water.quality23.join$date), xmax = max(water.quality23.join$date), ymin = 0, ymax = 0.16),
+            alpha = 1/5,
+            fill = "lightgreen") +
+  geom_hline(yintercept = c(0.16, 0.3), linetype = c("dashed"),
+             color = c("orange"), size = 1.0) +
+  geom_line() +
+  geom_point(size = 0.5) +
+  labs(x = "Date", y = expression(NH[3]~(mg/l))) +
+  theme_minimal()
+
+nursery.tank1.nh3.p
+```
+
+#### NO~2~
+
+``` {r nurseryNO2}
+
+# filter to fine out number of occurrances of above level NO2 results 
+nursery.no2.green <- water.quality23.join %>%
+  filter(department.x == "Nursery" & no2 < 0.5 & !is.na(no2)) %>%
+  select(no2)
+
+nursery.no2.amber <- water.quality23.join %>%
+  filter(department.x == "Nursery" & between(no2, 0.5, 0.8)) %>%
+  select(no2)
+
+nursery.no2.red <- water.quality23.join %>%
+  filter(department.x == "Nursery" & no2 > 0.8) %>%
+  select(no2)
+
+```
+
+NO~2~; green <0.5, amber 0.51-0.8, red >0.8. Amber classification modified to 0.5-0.8 for the purposes of this analysis. Greater than 75% of results within green classification. Investigate frequency of high value of 3.0 (isolated result of typo or multiple occurrences).
+
+Occurrences of NO~2~ within green classification range in Nursery: `r length(nursery.no2.green$no2)`
+
+Occurrences of NO~2~ within amber classification range in Nursery: `r length(nursery.no2.amber$no2)`
+
+Occurrences of NO~2~ within red classification range in Nursery: `r length(nursery.no2.red$no2)`
+
+``` {r nurseryTankNO2}
+
+nursery.tank.no2.skim <- water.quality23.join %>%
+  filter(department.x == "Nursery"  & !is.na(no2)) %>%
+  group_by(tank) %>%
+  skim(no2)
+```
+
+NO~2~ at similar levels among tanks. Summary table of nursery tank NO~2~ in appendix.
+
+``` {r nurseryTank1NO2, fig.cap = "Sichon nursery tank 10 NO~2~ time series", fig.align = "center", fig.dim = c(8,3), dpi = 200}
+
+nursery.tank10.no2.p <- water.quality23.join %>%
+  filter(department.x == "Nursery" & tank == "10" & !is.na(no2)) %>%
+  ggplot(aes(date, no2)) +
+  geom_rect(aes(xmin = min(water.quality23.join$date), xmax = max(water.quality23.join$date), ymin = 0, ymax = 0.5),
+            alpha = 1/5,
+            fill = "lightgreen") +
+  geom_hline(yintercept = c(0.5, 0.8), linetype = c("dashed"),
+             color = c("orange"), size = 1.0) +
+  geom_line() +
+  geom_point(size = 0.5) +
+  labs(x = "Date", y = expression(NO[2]~(mg/l))) +
+  theme_minimal()
+
+nursery.tank10.no2.p
+```
+
+#### DO
+
+DO; green ≥5, amber 4, red ≤3. All results within green classification.
+
+#### Temp
+
+Temp; green 29-32, amber 26-28 or 33-34, red <25 or > 35. All results within green classification.
+
+#### Calcium / magnesium
+
+Ca~2~: Mg~2~ ratio; this ratio seems to have been seldom calculated in the data supplied.
+
+***
+
+### Water Quality Biological Parameters
+
+``` {r skimWaterQualityBiologicalN}
+
+# summarise water quality data
+# tan
+wqb.nursery.summary <- water.quality23.join %>%
+  filter(department.x == "Nursery") %>%
+  skim(gvc, yvc, tvc, lb) %>%
+  select(-c(skim_type, n_missing, complete_rate))
+```
+
+``` {r wqBiologicalNurseryTable, ft.align="center"}
+
+wqb.nursery.summary %>%
+  flextable() %>%
+  set_header_labels(skim_variable = "Variable", n_missing = "Missing Data", complete_rate = "Complete rate", numeric.mean = "Mean", numeric.sd = "SD", numeric.p0 = "p0", numeric.p25 = "p25", numeric.p50 = "p50", numeric.p75 = "p75", numeric.p100 = "p100", numeric.hist = "hist") %>%
+  colformat_double(digits = 2) %>%
+  autofit() %>%
+  fit_to_width(7.5) %>%
+set_caption(caption = as_paragraph("Biological water quality summary statistics for Nursery area"), 
+  style = "Table Caption", 
+  autonum = run_autonum(seq_id = "tab"))
+```
+
+#### Green vibrio
+
+``` {r nurseryGVC}
+
+# filter to fine out number of occurrances of above level bacti results gvc
+nursery.gvc.green <- water.quality23.join %>%
+  filter(department.y == "Nursery" & gvc <80 & !is.na(gvc))
+
+nursery.gvc.amber <- water.quality23.join %>%
+  filter(department.y == "Nursery" & gvc >= 80 & gvc <= 100)
+
+nursery.gvc.red <- water.quality23.join %>%
+  filter(department.y == "Nursery" & gvc >100)
+```
+
+Green vibrio count; green <80 CFU/ml, amber 80-100 CFU/ml, red >100 CFU/ml. Greater than 50% of results within green classification. Investigate number of occurrences at amber and red classification range.
+
+Occurrences of GVC within green classification range in Nursery: `r length(nursery.gvc.green$gvc)`
+
+Occurrences of GVC within amber classification range in Nursery: `r length(nursery.gvc.amber$gvc)`
+
+Occurrences of GVC within red classification range in Nursery: `r length(nursery.gvc.red$gvc)`
+
+``` {r nurseryTankGVC}
+
+nursery.tank.gvc.skim <- water.quality23.join %>%
+  filter(department.y == "Nursery"  & !is.na(gvc)) %>%
+  group_by(tank) %>%
+  skim(gvc)
+```
+
+Variation in counts among tank groups; tanks A1-A6 and B1-B8 typically show lower maximum GVC counts than tanks 1-18. Some tanks e.g. tank 5 median value within red classification.
+
+``` {r nurseryTank5GVC, fig.cap = "Sichon nursery tank 5 GVC time series", fig.align = "center", fig.dim = c(8,3), dpi = 200}
+
+nursery.tank5.gvc.p <- water.quality23.join %>%
+  filter(department.y == "Nursery" & tank == "5" & !is.na(gvc)) %>%
+  ggplot(aes(date, gvc)) +
+  geom_rect(aes(xmin = min(water.quality23.join$date), xmax = max(water.quality23.join$date), ymin = 0, ymax = 80),
+            alpha = 1/5,
+            fill = "lightgreen") +
+  geom_hline(yintercept = c(80, 100), linetype = c("dashed"),
+             color = c("orange"), size = 1.0) +
+  geom_line() +
+  geom_point(size = 0.5) +
+  scale_y_log10(labels = scales::comma) +
+  annotation_logticks(sides = "l") +
+  xlab("Date") +
+  ylab("GVC (CFU/ml)") +
+  theme_minimal()
+
+nursery.tank5.gvc.p
+```
+
+#### Yellow vibrio
+
+``` {r nurseryYVC}
+
+# filter to fine out number of occurrances of above level bacti results yvc
+nursery.yvc.green <- water.quality23.join %>%
+  filter(department.y == "Nursery" & yvc < 1000 & !is.na(yvc)) %>%
+  select(yvc)
+
+nursery.yvc.amber <- water.quality23.join %>%
+  filter(department.y == "Nursery" & yvc >= 1000 & yvc <= 10000) %>%
+  select(yvc)
+
+nursery.yvc.red <- water.quality23.join %>%
+  filter(department.y == "Nursery" & yvc >= 10000) %>%
+  select(yvc)
+```
+
+Yellow vibrio count; green <1000 CFU/ml, amber 1000-10,000 CFU/ml, red >100,000 CFU/ml. Greater than 75% of results within green classification. Investigate number of occurrences at amber and red classification range. Red classification changed to >10,000 for the purposes of this analysis.
+
+Occurrences of YVC within green classification range in Nursery: `r length(nursery.yvc.green$yvc)`
+
+Occurrences of YVC within amber classification range in Nursery: `r length(nursery.yvc.amber$yvc)`
+
+Occurrences of YVC within red classification range in Nursery: `r length(nursery.yvc.red$yvc)`
+
+``` {r nurseryTankYVC}
+
+nursery.tank.yvc.skim <- water.quality23.join %>%
+  filter(department.y == "Nursery"  & !is.na(yvc)) %>%
+  group_by(tank) %>%
+  skim(yvc)
+```
+
+Variation in counts among tank groups; tanks A1-A6 and B1-B8 typically show lower maximum YVC counts than tanks 1-18.
+
+``` {r nurseryTank5YVC, fig.cap = "Sichon nursery tank 5 YVC time series", fig.align = "center", fig.dim = c(8,3), dpi = 200}
+
+nursery.tank5.yvc.p <- water.quality23.join %>%
+  filter(department.y == "Nursery" & tank == "5" & !is.na(yvc)) %>%
+  ggplot(aes(date, yvc)) +
+  geom_rect(aes(xmin = min(water.quality23.join$date), xmax = max(water.quality23.join$date), ymin = 0, ymax = 1000),
+            alpha = 1/5,
+            fill = "lightgreen") +
+  geom_hline(yintercept = c(1000, 10000), linetype = c("dashed"),
+             color = c("orange"), size = 1.0) +
+  geom_line() +
+  geom_point(size = 0.5) +
+  scale_y_log10(labels = scales::comma) +
+  annotation_logticks(sides = "l") +
+  xlab("Date") +
+  ylab("YVC (CFU/ml)") +
+  theme_minimal()
+
+nursery.tank5.yvc.p
+```
+
+#### Luminescent bacteria
+
+``` {r nurseryLB}
+
+# filter to fine out number of occurrances of above level bacti results yvc
+nursery.lb.green <- water.quality23.join %>%
+  filter(department.y == "Nursery" & lb <= 1000 & !is.na(lb)) %>%
+  select(lb)
+
+nursery.lb.amber <- water.quality23.join %>%
+  filter(department.y == "Nursery" & lb > 1000 & lb <= 30000) %>%
+  select(lb)
+
+nursery.lb.red <- water.quality23.join %>%
+  filter(department.y == "Nursery" & lb > 30000) %>%
+  select(lb)
+```
+
+Luminescent bacteria; not classified by traffic light system, classified in monthly reporting as ranges of 100-1000 CFU/ml, 1001-30,000 CFU/ml and > 30,000 CFU/ml. Greater than 75% of results within lower-band classification. Investigate number of occurrences at higher range. Classifications defined as green, amber and red for the purposes of this analysis.
+
+Occurrences of LB within green classification range in Nursery: `r length(nursery.lb.green$lb)`
+
+Occurrences of LB within amber classification range in Nursery: `r length(nursery.lb.amber$lb)`
+
+Occurrences of LB within red classification range in Nursery: `r length(nursery.lb.red$lb)`
+
+``` {r nurseryTankLB}
+
+nursery.tank.lb.skim <- water.quality23.join %>%
+  filter(department.y == "Nursery"  & !is.na(lb)) %>%
+  group_by(tank) %>%
+  skim(lb)
+```
+
+Variation in counts among tank groups; tanks A1-A6 and B1-B8 LB not present.
+
+``` {r nurseryTank5LB, fig.cap = "Sichon nursery tank 5 LB time series", fig.align = "center", fig.dim = c(8,3), dpi = 200}
+
+nursery.tank5.lb.p <- water.quality23.join %>%
+  filter(department.y == "Nursery" & tank == "5" & !is.na(lb)) %>%
+  ggplot(aes(date, lb)) +
+  geom_rect(aes(xmin = min(water.quality23.join$date), xmax = max(water.quality23.join$date), ymin = 0, ymax = 1000),
+            alpha = 1/5,
+            fill = "lightgreen") +
+  geom_hline(yintercept = c(1000, 30000), linetype = c("dashed"),
+             color = c("orange"), size = 1.0) +
+  geom_line() +
+  geom_point(size = 0.5) +
+  scale_y_log10(labels = scales::comma) +
+  annotation_logticks(sides = "l") +
+  xlab("Date") +
+  ylab("LB (CFU/ml)") +
+  theme_minimal()
+
+nursery.tank5.lb.p
+```
+
+***
+
+## Maturation
+
+### Water Quality Physical Parameters
+
+Note that Clr, Ca~2~ and Mg~2~ have been excluded from the table as data does not appear to include these variables. The columns p0 - p100 indicate the range of data and the interquartile values, p50 therefore indicates the median value and is likely to be a more representative average value than the mean (which may be influenced to a greater degree by extreme values).
+
+``` {r skimWaterQualityPhysicalM}
+
+# summarise water quality data
+# tan
+wqp.maturation.summary <- water.quality23.join %>%
+  filter(department.x == "Maturation") %>%
+  skim(ph, salinity, alkalinity, tan, nh4, nh3, no2, do, temp) %>%
+  select(-c(skim_type, n_missing, complete_rate))
+```
+
+``` {r wqPhysicalMaturationTable, ft.align="center"}
+
+wqp.maturation.summary %>%
+  flextable() %>%
+  set_header_labels(skim_variable = "Variable", n_missing = "Missing Data", complete_rate = "Complete rate", numeric.mean = "Mean", numeric.sd = "SD", numeric.p0 = "p0", numeric.p25 = "p25", numeric.p50 = "p50", numeric.p75 = "p75", numeric.p100 = "p100", numeric.hist = "hist") %>%
+  colformat_double(digits = 2) %>%
+  autofit() %>%
+  fit_to_width(7.5) %>%
+set_caption(caption = as_paragraph("Physical water quality summary statistics for Maturation area"), 
+  style = "Table Caption", 
+  autonum = run_autonum(seq_id = "tab"))
+```
+
+#### pH
+
+pH; green 7.8-8.3, amber 7.1-7.7 or 8.4-8.7, red <7.0 or >8.7. All results within green classification.
+
+#### Salinity
+
+Salinity range not defined by traffic light system, appears to be within suitable range for shrimp.
+
+#### Alkalinity
+
+``` {r maturationAlk}
+
+# filter to fine out number of occurrances of above level alk results 
+maturation.alk.green <- water.quality23.join %>%
+  filter(department.x == "Maturation" & between(alkalinity, 140, 160)) %>%
+  select(alkalinity)
+
+maturation.alk.amber <- water.quality23.join %>%
+  filter(department.x == "Maturation" & between(alkalinity, 110, 139) | department.x == "Maturation" & between(alkalinity, 161, 200)) %>%
+  select(alkalinity)
+
+maturation.alk.red <- water.quality23.join %>%
+  filter(department.x == "Maturation" & alkalinity < 110 & !is.na(alkalinity) | department.x == "Maturation" & alkalinity > 200) %>%
+  select(alkalinity)
+
+```
+
+Alkalinity; green 140-160, amber 110-139 or 160-200, red <110 or >200. Overlap between green and amber classification; amber classification changed to 161-200 for the purposes of this analysis. Extreme low and high values are within the red classification range, greater than 50% of results are above the amber classification range.
+
+Occurrences of alkalinity within green classification range in Maturation: `r length(maturation.alk.green$alkalinity)`
+
+Occurrences of alkalinity within amber classification range in Maturation: `r length(maturation.alk.amber$alkalinity)`
+
+Occurrences of alkalinity within red classification range in Maturation: `r length(maturation.alk.red$alkalinity)`
+
+``` {r maturationTankAlk}
+
+maturation.tank.alk.skim <- water.quality23.join %>%
+  filter(department.x == "Maturation"  & !is.na(alkalinity)) %>%
+  group_by(tank) %>%
+  skim(alkalinity)
+```
+
+Alkalinity at similar levels among tanks. Summary table of maturation tank alkalinity in appendix. 
+
+``` {r maturationTank1alk, fig.cap = "Sichon water maturation tank 1 alkalinity time series", fig.align = "center", fig.dim = c(8,3), dpi = 200}
+
+maturation.tank1.alk.p <- water.quality23.join %>%
+  filter(department.x == "Maturation" & tank == "1" & !is.na(alkalinity)) %>%
+  ggplot(aes(date, alkalinity)) +
+  geom_rect(aes(xmin = min(water.quality23.join$date), xmax = max(water.quality23.join$date), ymin = 140, ymax = 160),
+            alpha = 1/5,
+            fill = "lightgreen") +
+  geom_hline(yintercept = c(110, 140, 160, 200), linetype = c("dashed"),
+             color = c("orange"), size = 1.0) +
+  geom_line() +
+  geom_point(size = 0.5) +
+  xlab("Date") +
+  ylab("Alkalinity (mg/l)") +
+  theme_minimal()
+
+maturation.tank1.alk.p
+```
+
+#### TAN
+
+``` {r maturationTAN}
+
+# filter to fine out number of occurrances of above level TAN results 
+maturation.tan.green <- water.quality23.join %>%
+  filter(department.x == "Maturation" & tan < 1 & !is.na(tan)) %>%
+  select(tan)
+
+maturation.tan.amber <- water.quality23.join %>%
+  filter(department.x == "Maturation" & between(tan, 1, 3)) %>%
+  select(tan)
+
+maturation.tan.red <- water.quality23.join %>%
+  filter(department.x == "Maturation" & tan > 3) %>%
+  select(tan)
+
+```
+
+TAN; green <1, amber 1.1-3, red >3. TAN range of 1.0-<1.1 not defined in classification range; amber range modified to 1 - 3 for this analysis. 50% of the results are within the green classification, greater than 25% of the results are within the amber classification and some results exceed this. Investigate the number of occurrences of values above the green classification.
+
+Occurrences of TAN within green classification range in Maturation: `r length(maturation.tan.green$tan)`
+
+Occurrences of TAN within amber classification range in Maturation: `r length(maturation.tan.amber$tan)`
+
+Occurrences of TAN within red classification range in Maturation: `r length(maturation.tan.red$tan)`
+
+``` {r maturationTankTAN}
+
+maturation.tank.tan.skim <- water.quality23.join %>%
+  filter(department.x == "Maturation"  & !is.na(tan)) %>%
+  group_by(tank) %>%
+  skim(tan)
+```
+
+TAN at similar elevated levels among tanks. Summary table of maturation tank TAN in appendix.
+
+``` {r maturationTank13Tan, fig.cap = "Sichon maturation tank 13 TAN time series", fig.align = "center", fig.dim = c(8,3), dpi = 200}
+
+maturation.tank13.tan.p <- water.quality23.join %>%
+  filter(department.x == "Maturation" & tank == "13" & !is.na(tan)) %>%
+  ggplot(aes(date, tan)) +
+  geom_rect(aes(xmin = min(water.quality23.join$date), xmax = max(water.quality23.join$date), ymin = 0, ymax = 1),
+            alpha = 1/5,
+            fill = "lightgreen") +
+  geom_hline(yintercept = c(1, 3), linetype = c("dashed"),
+             color = c("orange"), size = 1.0) +
+  geom_line() +
+  geom_point(size = 0.5) +
+  xlab("Date") +
+  ylab("TAN (mg/l)") +
+  theme_minimal()
+
+maturation.tank13.tan.p
+```
+
+#### NH~3~
+
+``` {r maturationNH3}
+
+# filter to fine out number of occurrances of above level NH3 results 
+maturation.nh3.green <- water.quality23.join %>%
+  filter(department.x == "Maturation" & nh3 < 0.16 & !is.na(nh3)) %>%
+  select(nh3)
+
+maturation.nh3.amber <- water.quality23.join %>%
+  filter(department.x == "Maturation" & between(nh3, 0.16, 0.3)) %>%
+  select(nh3)
+
+maturation.nh3.red <- water.quality23.join %>%
+  filter(department.x == "Maturation" & nh3 > 0.3) %>%
+  select(nh3)
+
+```
+
+NH~3~; green <0.16, amber 0.17-0.3, red >0.3. Classification not defined for values 0.16- <0.17, amber range modified to 0.16-0.3 for the purposes of this analysis. Greater than 75% of the results are within the green classification. Investigate the number of occurrences of values above the green classification.
+
+Occurrences of NH~3~ within green classification range in Maturation: `r length(maturation.nh3.green$nh3)`
+
+Occurrences of NH~3~ within amber classification range in Maturation: `r length(maturation.nh3.amber$nh3)`
+
+Occurrences of NH~3~ within red classification range in Maturation: `r length(maturation.nh3.red$nh3)`
+
+``` {r maturationTankNH3}
+
+maturation.tank.nh3.skim <- water.quality23.join %>%
+  filter(department.x == "Maturation"  & !is.na(nh3)) %>%
+  group_by(tank) %>%
+  skim(nh3)
+```
+
+NH~3~ at similar levels among tanks. Summary table of nursery tank NH~3~ in appendix.
+
+``` {r maturationTank2NH3, fig.cap = "Sichon maturation tank 2 NH~3~ time series", fig.align = "center", fig.dim = c(8,3), dpi = 200}
+
+maturation.tank2.nh3.p <- water.quality23.join %>%
+  filter(department.x == "Maturation" & tank == "2" & !is.na(nh3)) %>%
+  ggplot(aes(date, nh3)) +
+  geom_rect(aes(xmin = min(water.quality23.join$date), xmax = max(water.quality23.join$date), ymin = 0, ymax = 0.16),
+            alpha = 1/5,
+            fill = "lightgreen") +
+  geom_hline(yintercept = c(0.16, 0.3), linetype = c("dashed"),
+             color = c("orange"), size = 1.0) +
+  geom_line() +
+  geom_point(size = 0.5) +
+  labs(x = "Date", y = expression(NH[3]~(mg/l))) +
+  theme_minimal()
+
+maturation.tank2.nh3.p
+```
+
+#### NO~2~
+
+``` {r maturationNO2}
+
+# filter to fine out number of occurrances of above level NO2 results 
+maturation.no2.green <- water.quality23.join %>%
+  filter(department.x == "Maturation" & no2 < 0.5 & !is.na(no2)) %>%
+  select(no2)
+
+maturation.no2.amber <- water.quality23.join %>%
+  filter(department.x == "Maturation" & between(no2, 0.5, 0.8)) %>%
+  select(no2)
+
+maturation.no2.red <- water.quality23.join %>%
+  filter(department.x == "Maturation" & no2 > 0.8) %>%
+  select(no2)
+
+```
+
+NO~2~; green <0.5, amber 0.51-0.8, red >0.8. Amber classification modified to 0.5-0.8 for the purposes of this analysis. Greater than 50% of the results are within the red classification.
+
+Occurrences of NO~2~ within green classification range in Maturation: `r length(maturation.no2.green$no2)`
+
+Occurrences of NO~2~ within amber classification range in Maturation: `r length(maturation.no2.amber$no2)`
+
+Occurrences of NO~2~ within red classification range in Maturation: `r length(maturation.no2.red$no2)`
+
+``` {r maturationTankNO2}
+
+maturation.tank.no2.skim <- water.quality23.join %>%
+  filter(department.x == "Maturation"  & !is.na(no2)) %>%
+  group_by(tank) %>%
+  skim(no2)
+```
+
+NO~2~ at similar levels among tanks. Summary table of maturation tank NO~2~ in appendix.
+
+``` {r maturationTank4NO2, fig.cap = "Sichon maturation tank 4 NO~2~ time series", fig.align = "center", fig.dim = c(8,3), dpi = 200}
+
+maturation.tank4.no2.p <- water.quality23.join %>%
+  filter(department.x == "Maturation" & tank == "4" & !is.na(no2)) %>%
+  ggplot(aes(date, no2)) +
+  geom_rect(aes(xmin = min(water.quality23.join$date), xmax = max(water.quality23.join$date), ymin = 0, ymax = 0.5),
+            alpha = 1/5,
+            fill = "lightgreen") +
+  geom_hline(yintercept = c(0.5, 0.8), linetype = c("dashed"),
+             color = c("orange"), size = 1.0) +
+  geom_line() +
+  geom_point(size = 0.5) +
+  labs(x = "Date", y = expression(NO[2]~(mg/l))) +
+  theme_minimal()
+
+maturation.tank4.no2.p
+```
+
+#### DO
+
+DO; green ≥5, amber 4, red ≤3. All results within green classification.
+
+#### Temp
+
+``` {r maturationTemp}
+
+# filter to fine out number of occurrances of above level temp results 
+maturation.temp.green <- water.quality23.join %>%
+  filter(department.x == "Maturation" & between(temp, 27, 29.9)) %>%
+  select(temp)
+
+maturation.temp.amber <- water.quality23.join %>%
+  filter(department.x == "Maturation" & between(temp, 25, 26.9) | department.x == "Maturation" & between(temp, 30, 34)) %>%
+  select(temp)
+
+maturation.temp.red <- water.quality23.join %>%
+  filter(department.x == "Maturation" & temp < 25 & !is.na(temp) | department.x == "Maturation" & temp > 34) %>%
+  select(temp)
+
+```
+
+Temp; green 27-29, amber 25-26 or 30-34, red <25 or >34. Since temperatures are recorded to one decimal point, classification ranges have been modified to green 27-29.9, amber 25-26.9 or 30-34 and red <25 or >34, for the purposes of this analysis. Median value within green classification, frequently values are found within the amber classification. 
+
+Occurrences of temperature within green classification range in Maturation: `r length(maturation.temp.green$temp)`
+
+Occurrences of temperature within amber classification range in Maturation: `r length(maturation.temp.amber$temp)`
+
+Occurrences of temperature within red classification range in Maturation: `r length(maturation.temp.red$temp)`
+
+``` {r maturationTankTemp}
+
+maturation.tank.temp.skim <- water.quality23.join %>%
+  filter(department.x == "Maturation"  & !is.na(temp)) %>%
+  group_by(tank) %>%
+  skim(temp)
+```
+
+Temperature at similar levels among tanks. Summary table of maturation tank temperature in appendix. 
+
+``` {r maturationTank1temp, fig.cap = "Sichon water maturation tank 1 temperature time series", fig.align = "center", fig.dim = c(8,3), dpi = 200}
+
+maturation.tank1.temp.p <- water.quality23.join %>%
+  filter(department.x == "Maturation" & tank == "1" & !is.na(temp)) %>%
+  ggplot(aes(date, temp)) +
+  geom_rect(aes(xmin = min(water.quality23.join$date), xmax = max(water.quality23.join$date), ymin = 27, ymax = 30),
+            alpha = 1/5,
+            fill = "lightgreen") +
+  geom_hline(yintercept = c(25, 27, 30, 34), linetype = c("dashed"),
+             color = c("orange"), size = 1.0) +
+  geom_line() +
+  geom_point(size = 0.5) +
+  labs(x = "Date", y = expression("Temperature " ( degree~C))) +
+  theme_minimal()
+
+maturation.tank1.temp.p
+```
+
+#### Calcium / magnesium
+
+Ca~2~: Mg~2~ ratio; this ratio seems to have been seldom calculated in the data supplied.
+
+***
+
+### Water Quality Biological Parameters
+
+``` {r skimWaterQualityBiologicalM}
+
+# summarise water quality data
+# tan
+wqb.maturation.summary <- water.quality23.join %>%
+  filter(department.x == "Maturation") %>%
+  skim(gvc, yvc, tvc, lb) %>%
+  select(-c(skim_type, n_missing, complete_rate))
+```
+
+``` {r wqBiologicalMaturationTable, ft.align="center"}
+
+wqb.maturation.summary %>%
+  flextable() %>%
+  set_header_labels(skim_variable = "Variable", n_missing = "Missing Data", complete_rate = "Complete rate", numeric.mean = "Mean", numeric.sd = "SD", numeric.p0 = "p0", numeric.p25 = "p25", numeric.p50 = "p50", numeric.p75 = "p75", numeric.p100 = "p100", numeric.hist = "hist") %>%
+  colformat_double(digits = 2) %>%
+  autofit() %>%
+  fit_to_width(7.5) %>%
+set_caption(caption = as_paragraph("Biological water quality summary statistics for Maturation area"), 
+  style = "Table Caption", 
+  autonum = run_autonum(seq_id = "tab"))
+```
+
+#### Green vibrio
+
+``` {r maturationGVC}
+
+# filter to fine out number of occurrances of above level bacti results gvc
+maturation.gvc.green <- water.quality23.join %>%
+  filter(department.y == "Maturation" & gvc <80 & !is.na(gvc))
+
+maturation.gvc.amber <- water.quality23.join %>%
+  filter(department.y == "Maturation" & gvc >= 80 & gvc <= 100)
+
+maturation.gvc.red <- water.quality23.join %>%
+  filter(department.y == "Maturation" & gvc >100)
+```
+
+Green vibrio count; green <80 CFU/ml, amber 80-100 CFU/ml, red >100 CFU/ml. 75% of results within green classification. Investigate number of occurrences at amber and red classification range.
+
+Occurrences of GVC within green classification range in Maturation: `r length(maturation.gvc.green$gvc)`
+
+Occurrences of GVC within amber classification range in Maturation: `r length(maturation.gvc.amber$gvc)`
+
+Occurrences of GVC within red classification range in Maturation: `r length(maturation.gvc.red$gvc)`
+
+``` {r maturationTankGVC}
+
+maturation.tank.gvc.skim <- water.quality23.join %>%
+  filter(department.y == "Maturation"  & !is.na(gvc)) %>%
+  group_by(tank) %>%
+  skim(gvc)
+```
+
+Variation in counts among tank groups; tanks sandworms and nauplii tanks appear high.  Time series indicates a maturation tank (16) with a typical p0-p75 with a high maximum value of 30,000.
+
+``` {r maturationTank15GVC, fig.cap = "Sichon maturation tank 16 GVC time series", fig.align = "center", fig.dim = c(8,3), dpi = 200}
+
+maturation.tank16.gvc.p <- water.quality23.join %>%
+  filter(department.y == "Maturation" & tank == "16" & !is.na(gvc)) %>%
+  ggplot(aes(date, gvc)) +
+  geom_rect(aes(xmin = min(water.quality23.join$date), xmax = max(water.quality23.join$date), ymin = 0, ymax = 80),
+            alpha = 1/5,
+            fill = "lightgreen") +
+  geom_hline(yintercept = c(80, 100), linetype = c("dashed"),
+             color = c("orange"), size = 1.0) +
+  geom_line() +
+  geom_point(size = 0.5) +
+  scale_y_log10(labels = scales::comma) +
+  annotation_logticks(sides = "l") +
+  xlab("Date") +
+  ylab("GVC (CFU/ml)") +
+  theme_minimal()
+
+maturation.tank16.gvc.p
+```
+
+#### Yellow vibrio
+
+``` {r maturationYVC}
+
+# filter to fine out number of occurrances of above level bacti results yvc
+maturation.yvc.green <- water.quality23.join %>%
+  filter(department.y == "Maturation" & yvc < 1000 & !is.na(yvc)) %>%
+  select(yvc)
+
+maturation.yvc.amber <- water.quality23.join %>%
+  filter(department.y == "Maturation" & yvc >= 1000 & yvc <= 10000) %>%
+  select(yvc)
+
+maturation.yvc.red <- water.quality23.join %>%
+  filter(department.y == "Maturation" & yvc >= 10000) %>%
+  select(yvc)
+```
+
+Yellow vibrio count; green <1000 CFU/ml, amber 1000-10,000 CFU/ml, red >100,000 CFU/ml. Greater than 50% of results within green classification. Investigate number of occurrences at amber and red classification range. Red classification changed to >10,000 for the purposes of this analysis.
+
+Occurrences of YVC within green classification range in Maturation: `r length(maturation.yvc.green$yvc)`
+
+Occurrences of YVC within amber classification range in Maturation: `r length(maturation.yvc.amber$yvc)`
+
+Occurrences of YVC within red classification range in Maturation: `r length(maturation.yvc.red$yvc)`
+
+``` {r maturationTankYVC}
+
+maturation.tank.yvc.skim <- water.quality23.join %>%
+  filter(department.y == "Maturation"  & !is.na(yvc)) %>%
+  group_by(tank) %>%
+  skim(yvc)
+```
+
+Similar pattern to GVC in maturation, high counts in sandworms, nauplii and dip tanks. Maturation tanks have similar levels across the tanks 1-20
+
+``` {r maturationTank10YVC, fig.cap = "Sichon maturation tank 10 YVC time series", fig.align = "center", fig.dim = c(8,3), dpi = 200}
+
+maturation.tank10.yvc.p <- water.quality23.join %>%
+  filter(department.y == "Maturation" & tank == "10" & !is.na(yvc)) %>%
+  ggplot(aes(date, yvc)) +
+  geom_rect(aes(xmin = min(water.quality23.join$date), xmax = max(water.quality23.join$date), ymin = 0, ymax = 1000),
+            alpha = 1/5,
+            fill = "lightgreen") +
+  geom_hline(yintercept = c(1000, 10000), linetype = c("dashed"),
+             color = c("orange"), size = 1.0) +
+  geom_line() +
+  geom_point(size = 0.5) +
+  scale_y_log10(labels = scales::comma) +
+  annotation_logticks(sides = "l") +
+  xlab("Date") +
+  ylab("YVC (CFU/ml)") +
+  theme_minimal()
+
+maturation.tank10.yvc.p
+```
+
+#### Luminescent bacteria
+
+``` {r maturationLB}
+
+# filter to fine out number of occurrances of above level bacti results yvc
+maturation.lb.green <- water.quality23.join %>%
+  filter(department.y == "Maturation" & lb <= 1000 & !is.na(lb)) %>%
+  select(lb)
+
+maturation.lb.amber <- water.quality23.join %>%
+  filter(department.y == "Maturation" & lb > 1000 & lb <= 30000) %>%
+  select(lb)
+
+maturation.lb.red <- water.quality23.join %>%
+  filter(department.y == "Maturation" & lb > 30000) %>%
+  select(lb)
+```
+
+Luminescent bacteria; not classified by traffic light system, classified in monthly reporting as ranges of 100-1000 CFU/ml, 1001-30,000 CFU/ml and > 30,000 CFU/ml. All results within lower-band classification. Classifications defined as green, amber and red for the purposes of this analysis.
+
+Occurrences of LB within green classification range in Maturation: `r length(maturation.lb.green$lb)`
+
+Occurrences of LB within amber classification range in Maturation: `r length(maturation.lb.amber$lb)`
+
+Occurrences of LB within red classification range in Maturation: `r length(maturation.lb.red$lb)`
+
+``` {r maturationTankLB}
+
+maturation.tank.lb.skim <- water.quality23.join %>%
+  filter(department.y == "Maturation"  & !is.na(lb)) %>%
+  group_by(tank) %>%
+  skim(lb)
+```
+
+Variation in counts among tank groups; Maturation tanks low level counts - wheras some high level counts in nauplii tanks.
+
+``` {r maturationTank4LB, fig.cap = "Sichon maturation tank 4 LB time series", fig.align = "center", fig.dim = c(8,3), dpi = 200}
+
+maturation.tank4.lb.p <- water.quality23.join %>%
+  filter(department.y == "Maturation" & tank == "4" & !is.na(lb)) %>%
+  ggplot(aes(date, lb)) +
+  geom_rect(aes(xmin = min(water.quality23.join$date), xmax = max(water.quality23.join$date), ymin = 0, ymax = 1000),
+            alpha = 1/5,
+            fill = "lightgreen") +
+  geom_hline(yintercept = c(1000, 30000), linetype = c("dashed"),
+             color = c("orange"), size = 1.0) +
+  geom_line() +
+  geom_point(size = 0.5) +
+  scale_y_log10(labels = scales::comma) +
+  annotation_logticks(sides = "l") +
+  xlab("Date") +
+  ylab("LB (CFU/ml)") +
+  theme_minimal()
+
+maturation.tank4.lb.p
+```
+
+***
+
+# 23 Sample locations
+
+In addition to analysing the routine water quality monitoring data, a further set of water quality samples were undertaken upon request. These samples were taken from 23 locations covering the facility and have again be subset into physical and biological water quality variables.
+
+Physical parameters:
+
+* TAN
+* NH~3~
+* NO~2~
+* Alkalinity
+* pH
+* Chlorine
+
+Biological parameters:
+
+* Total vibrio count
+* Total bacterial count
+
+These data will be summarised according to department within the facility and attention will be focused if any of the variables exceed the desired range as indicated by the green, amber and red classification.
+
+## Water System
+
+### Water Quality Physical Parameters
+
+#### TAN
+
+TAN levels of ≥1 mg/l were recorded for locations: 19, 20 and 21 with codes SD1, SD2 and OTF. These are sedimentation tanks 1 and 2 and overfall to sea. 
+
+#### NH~3~
+
+NH~3~ levels of ≥ 0.16 mg/l were recorded for locations: 19, 20 and 21 with codes SD1, SD2 and OTF. These are sedimentation tanks 1 and 2 and overfall to sea.
+
+#### NO~2~
+
+NO~2~ levels of ≥0.5mg/l were recorded for locations: 17, 18, 19, 20 and 21 with codes EF1, EF2, SD1, SD2 and OTF. These are effluent ponds 1 and 2, sedimentation tank 1 and 2 and overfall to sea.
+
+#### Alkalinity
+
+Alkalinity levels of <120mg/l or > 140mg/l were recorded for locations: 1, 2, 4, 17, 18, 19, 20, 21, 22 and 23 with codes: SWS, SWI, R4/R5, EF1, EF2, SD1, SD2 and OTF. These are: sea water sample, seawater intake line, R4/R5, effluent ponds 1 and 2, sedimentation tanks 1 and 2, overfall to sea, freshwater intake and freshwater reservoir.
+
+#### pH
+
+pH levels of <8 or > 8.4 were recorded for locations: 3, 4, 17, 18, 19, 20, 21, 22 and 23 with codes: R1/R2, R4/R5, EF1, EF2, SD1, SD2 and OTF. These are: R1/ R1, R4/ R5, effluent ponds 1 and 2, sedimentation tanks 1 and 2, overfall to sea, fresh water intake and freshwater reservoir.
+
+#### Chlorine
+
+All samples below critical level of 0.48 mg/l.
+
+### Water Quality Biological Parameters
+
+#### Total vibrio count
+
+Total vibrio counts of >1000 CFU/ml were recorded for locations: 18 and 20 with codes EF2 and SD2. These are effluent pond 2 and sedimentation tank 2
+
+## Nursery
+
+### Water Quality Physical Parameters
+
+#### TAN
+
+TAN levels of >1 mg/l were recorded for locations: 13 code NT1. This is PL tank
+
+#### NH~3~
+
+TAN levels of >0.16 mg/l were recorded for locations: 13 code NT1. This is PL tank
+
+#### NO~2~
+
+NO~2~ levels did not exceed 0.5 mg/l within the nursery department.
+
+#### Alkalinity
+
+Alkalinity levels of <150 mg/l or > 200 mg/l were recorded for locations: 11, 13, 14 with codes: NRF, NT1, NT2. These are: nursery reservoir freshwater, and PL tanks.
+
+#### pH
+
+pH levels of <8 or > 8.4 were recorded for locations: 11, 16 with codes NRF, PKT2. These are: nursery reservoir freshwater and plankton tank.
+
+#### Chlorine
+
+All samples below critical level of 0.48 mg/l.
+
+### Water Quality Biological Parameters
+
+#### Total vibrio count
+
+Total vibrio counts of >1000 CFU/ml were recorded for locations: 14 with code NT2. This is PL tank.
+
+## Maturation
+
+### Water Quality Physical Parameters
+
+#### TAN
+
+All samples below level of 1.0 mg/l.
+
+#### NH~3~
+
+All samples below level of 0.16 mg/l.
+
+#### NO~2~
+
+All samples below level of 0.5 mg/l.
+
+#### Alkalinity
+
+Alkalinity levels of <140 mg/l or > 160 mg/l were recorded for locations: 6 with code MR2. This is maturation reservoir 2.
+
+#### pH
+
+pH levels of <7.8 or > 8.3 were recorded for locations: 5, 6, 7, 8 with codes: MR1, MR2, ER and SR. These are: maturation reservoir 1 and 2, E zone reservoir and spawning reservoir.
+
+#### Chlorine
+
+All samples below critical level of 0.48 mg/l.
+
+### Water Quality Biological Parameters
+
+#### Total vibrio count
+
+Total vibrio counts <1000 CFU/ml within maturation department.
+
+# Effluent Reports
+
+Standards have been set by the Department of Fisheries and the Marine Department regulating the limits of water quality parameters that must be adhered to on water relesed to the environment. 
+
+* Ammonia nitrogen: ≤1.1 (DOF), ≤1.1 (Marine Department)
+* Biochemical oxygen demand (BOD): ≤20 (DOF), ≤25 (Marine Department)
+* Hydrogen sulphide: ≤0.001 (DOF), ≤0.001 (Marine Department)
+* pH: 6.5-9.0 (DOF), 5.5-9.0 (Marine Department)
+* Total nitrogen: ≤4 (DOF), ≤4 (Marine Department)
+* Total phosphorous: ≤0.4 (DOF), ≤0.4 (Marine Department)
+* Total suspended solids: ≤70 (DOF), ≤0.4 (MArine Department)
+
+For the purposes of this analysis, if there is a discrepancy within the levels, the lower figure has been selected. Units have not been stated for the levels, but are assumned to be mg/l.
+
+#### Ammonia nitrogen
+
+All samples below stipulated level.
+
+#### Biological oxygen demand (BOD)
+
+Four from nine samples exceed stipulated level: 
+
+``` {r effluentBod, ft.align="center"}
+
+effluent.bod <- effluent %>%
+  filter(variable == "bod" & value > 20) %>%
+  select(-variable)
+
+effluent.bod %>%
+  flextable() %>%
+  set_header_labels(date = "Date", id = "Location", value = "Value") %>%
+  colformat_double(digits = 2) %>%
+  autofit() %>%
+  fit_to_width(7.5) %>%
+set_caption(caption = as_paragraph("Sichon effluent BOD"), 
+  style = "Table Caption", 
+  autonum = run_autonum(seq_id = "tab"))
+```
+
+#### Hydrogen sulphide
+
+Three from nine samples exceed stipulated level:
+
+``` {r effluentH2S, ft.align="center"}
+
+effluent.h2s <- effluent %>%
+  filter(variable == "h2s" & value > 0.001) %>%
+  select(-variable)
+
+effluent.h2s %>%
+  flextable() %>%
+  set_header_labels(date = "Date", id = "Location", value = "Value") %>%
+  colformat_double(digits = 2) %>%
+  autofit() %>%
+  fit_to_width(7.5) %>%
+set_caption(caption = as_paragraph("Sichon effluent hydrogen sulphide"), 
+  style = "Table Caption", 
+  autonum = run_autonum(seq_id = "tab"))
+```
+
+#### pH
+
+Two from nine samples exceed stipulated level:
+
+``` {r effluentPh, ft.align="center"}
+
+effluent.ph <- effluent %>%
+  filter(variable == "ph" & value < 5.5 | variable == "ph" & value > 9) %>%
+  select(-variable)
+
+effluent.ph %>%
+  flextable() %>%
+  set_header_labels(date = "Date", id = "Location", value = "Value") %>%
+  colformat_double(digits = 2) %>%
+  autofit() %>%
+  fit_to_width(7.5) %>%
+set_caption(caption = as_paragraph("Sichon effluent pH"), 
+  style = "Table Caption", 
+  autonum = run_autonum(seq_id = "tab"))
+```
+
+#### Total nitrogen
+
+Two from nine samples exceed stipulated level:
+
+``` {r effluentTan, ft.align="center"}
+
+effluent.tan <- effluent %>%
+  filter(variable == "tan" & value > 4) %>%
+  select(-variable)
+
+effluent.tan %>%
+  flextable() %>%
+  set_header_labels(date = "Date", id = "Location", value = "Value") %>%
+  colformat_double(digits = 2) %>%
+  autofit() %>%
+  fit_to_width(7.5) %>%
+set_caption(caption = as_paragraph("Sichon effluent total nitrogen"), 
+  style = "Table Caption", 
+  autonum = run_autonum(seq_id = "tab"))
+```
+
+#### Total phosphorous
+
+Two from nine samples exceed stipulated level:
+
+``` {r effluentTp, ft.align="center"}
+
+effluent.tp <- effluent %>%
+  filter(variable == "tp" & value > 0.4) %>%
+  select(-variable)
+
+effluent.tp %>%
+  flextable() %>%
+  set_header_labels(date = "Date", id = "Location", value = "Value") %>%
+  colformat_double(digits = 2) %>%
+  autofit() %>%
+  fit_to_width(7.5) %>%
+set_caption(caption = as_paragraph("Sichon effluent total phosphorous"), 
+  style = "Table Caption", 
+  autonum = run_autonum(seq_id = "tab"))
+```
+
+#### Total suspended solids
+
+All samples below stipulated level.
+
+# System Loading Modelling
+
+To determine expected system performance, feed inputs for nursery and maturation departments will be studied. Data has been provided to indicate feed type and quantity provided per day across a range of DOCs (Day of culture). Feed composition has been supplied for the majority of the feed inputs. The focus will initially be placed on nitrogen inputs in the form of protein, where protein content is not specified it will be estimated from published literature.
+
+## Nursery
+
+The nursery department has been divided into zones A, B, C and D. Zones A and B have stocking input of 1.75 million nauplii, Zones C and D have a stocking input of 4 million nauplii. Stocking at nauplii stage represents DOC 0, the livestock are reared up to PL-14 which is recorded as DOC 22. 
+
+Feed inputs are given as per tank within Zone A/B or per tank within Zone C/D. Nitrogen inputs will therefore be considered on a per tank basis, one tank from Zone A/B and one tank from zone C/D will be used for calculation purposes. Total department figures can then be calculated if required by multiplication of total tank number (in operation at the same time). Tanks in zone A/B are 15m^3^ each with a usable volume of 11m^3^, there are 20 tanks in each zone. Tanks in Zone C/D are 31^m^ each with a usable volume of 25m^3^, there are 10 tanks in each zone.
+
+Upon calculation of nitrogen inputs, it is possible to estimate required water exchange rates, within a tank, to maintain water quality parameters (TAN-N) so that a build-up of nitrogen does not occur that may exceed specified limits (1 mg/l in this case). In order to calculate total department water requirements, it is necessary to understand production scheduling so that each tank requirement can be accounted for on each given day.
+
+### Feed types
+
+The following feed types (and codes) are used in the nursery department:
+Thalassiosira sp. (th), Spirulina (mpz), encap zoea (zoea), encap mysis (mysis), artemia instar I (art_1), artemia instar II (art_2), Hypro EPL H150 (epl), Hypro LPL H300 (lpl), flake.
+
+``` {r nurseryFeedProteinTable, ft.align="center"}
+
+nursery.feed.composition.wide <- nursery.feed.composition %>% group_by(feed) %>% pivot_wider(names_from = variable, values_from = value)
+
+nursery.feed.composition.wide %>%
+  flextable() %>%
+  set_header_labels(feed = "Feed", protein = "Protein", lipid = "Lipid", hufa = "HUFA", fiber = "Fiber", moisture = "Moisture", ash = "Ash") %>%
+  colformat_double(digits = 2) %>%
+  autofit() %>%
+  fit_to_width(7.5) %>%
+set_caption(caption = as_paragraph("Sichon nursery feed composition summary (percentage composition)"), 
+  style = "Table Caption", 
+  autonum = run_autonum(seq_id = "tab"))
+```
+
+### Feed loading
+
+``` {r nurseryProtein}
+
+tanks_ab <- 11
+tanks_cd <- 25
+
+nursery.protein <- nursery.feed.composition %>%
+  filter(variable == "protein") %>%
+  mutate(value = value / 100) %>%
+  rename(protein.proportion = value) %>%
+  select(-variable)
+
+nursery.protein.input <- nursery.feed.input %>%
+  left_join(nursery.protein, by = "feed") %>%
+  mutate(value = value / 1000,
+         protein = value * protein.proportion) %>%
+  filter(!feed == "th")
+
+nursery.doc.nitrogen <- nursery.protein.input %>%
+  group_by(doc, zone) %>%
+  summarise(protein.sum = sum(protein)) %>%
+  mutate(tan = protein.sum * 0.144,
+         tan.mg.l = case_when(zone == "a_b" ~ tan * 1e6 / (tanks_ab * 1000),
+                              zone == "c_d" ~ tan * 1e6 / (tanks_cd * 1000)))
+
+nursery.tan.max <- nursery.doc.nitrogen %>%
+  group_by(zone) %>%
+  summarise(max.tan = max(tan))
+
+```
+
+``` {r nurseryTanksTanMax, ft.align="center"}
+
+nursery.tan.max %>%
+  flextable() %>%
+  set_header_labels(zone = "Zone", max.tan = "Max TAN") %>%
+  colformat_double(digits = 3) %>%
+  autofit() %>%
+  fit_to_width(7.5) %>%
+set_caption(caption = as_paragraph("Sichon nursery maximum tank TAN kg/day"), 
+  style = "Table Caption", 
+  autonum = run_autonum(seq_id = "tab"))
+```
+
+The understanding is that tank water exchanges are performed once per day when tank cleaning is also undertaken. Six feeds are given per day, at even intervals. There is the potential for TAN-N to accumulate during the day as feed is progressively metabolised. One can predict the maximum level of accumulated TAN-N from two perspectives (starting the tank at a theoretical starting point of zero, or estimating residual TAN-N from the previous day post water exchange). Maximum daily water exchanges appear to be 55% of tank volume.
+
+``` {r nurseryTanksPredictedTan, fig.cap = "Sichon nursery tanks predicted TAN daily accumulation level (from daily starting point of zero mg/l TAN)", fig.align = "center", fig.dim = c(8,3), dpi = 200}
+
+zone.labs <- c("Tanks A / B", "Tanks C / D")
+names(zone.labs) <- c("a_b", "c_d")
+
+nursery.tanks.predicted.tan.p <- nursery.doc.nitrogen %>%
+  ggplot(aes(doc, tan.mg.l)) +
+  geom_rect(aes(xmin = 0, xmax = 22, ymin = 0, ymax = 1),
+            alpha = 1/5,
+            fill = "lightgreen") +
+  geom_hline(yintercept = c(1, 3), linetype = c("dashed"),
+             color = c("orange"), size = 1.0) +
+  geom_line() +
+  geom_point(size = 0.5) +
+  xlab("DOC") +
+  ylab("TAN (mg/l)") +
+  theme_bw() +
+  facet_grid(vars(zone), scales = "free", labeller = labeller(zone = zone.labs))
+
+nursery.tanks.predicted.tan.p
+```
+
+Estimated maximum daily accumulation of TAN-N (if starting from zero TAN):  
+Tanks zone A/B `r nursery.tan.max[1,2] * 1e6 / (tanks_ab * 1000)` mg/l.  
+Tanks zone C/D `r nursery.tan.max[2,2] * 1e6 / (tanks_cd * 1000)` mg/l.  
+
+Estimated maximum daily accumulation of TAN-N (if not starting from zero TAN):  
+Tanks zone A/B `r nursery.tan.max[1,2] * 1e6 / (tanks_ab * 1000) + 0.45 * (nursery.tan.max[1,2] * 1e6 / (tanks_ab * 1000))` mg/l.  
+Tanks zone C/D `r nursery.tan.max[2,2] * 1e6 / (tanks_cd * 1000) + 0.4 * (nursery.tan.max[2,2] * 1e6 / (tanks_cd * 1000))` mg/l.
+
+``` {r massBalanceParameters}
+
+desired.tan <- 1 # max 1 mg/l TAN in tanks
+```
+
+``` {r massBalanceEquations}
+
+# component specifics
+# system efficiency 
+tan.c1 <- desired.tan
+tan.cbest <- 0
+tan.te <- 1.0
+tan.c2 <- tan.c1 + tan.te * (tan.cbest - tan.c1)
+
+nursery.tan.exchange <- nursery.doc.nitrogen %>%
+  mutate(daily.exchange.rate = abs(tan * 1e6 / (tan.c2 - tan.c1) / 1000),
+         hourly.exchange.rate = abs(tan * 1e6 / (tan.c2 - tan.c1) / 24 / 1000)) %>%
+  left_join(nursery.exchange, by = c("doc", "zone")) %>%
+  mutate(actual.daily.exchange.rate = case_when(zone == "a_b" ~ exchange_water * tanks_ab,
+                                                zone == "c_d" ~ exchange_water * tanks_cd)) %>%
+  pivot_longer(cols = c(daily.exchange.rate, actual.daily.exchange.rate), names_to = "exchange.classification", values_to = "exchange.rate") %>%
+  mutate(exchange.classification = recode(exchange.classification, "daily.exchange.rate" = "predicted daily", "actual.daily.exchange.rate" = "actual daily"))
+
+
+```
+
+``` {r nurseryTanksExchangePlot, fig.cap = "Sichon nursery tanks estimated vs actual daily water exchange for tanks in zone A/B and C/D", fig.align = "center", fig.dim = c(8,3), dpi = 200}
+
+zone.labs <- c("Tanks A / B", "Tanks C / D")
+names(zone.labs) <- c("a_b", "c_d")
+
+nursery.tanks.exchange.p <- nursery.tan.exchange %>%
+  ggplot(aes(doc, exchange.rate, linetype = exchange.classification)) +
+  geom_line() +
+  labs(x = "DOC", y = expression("Water Exchange " ( m^3/day))) +
+  theme_bw() +
+  facet_grid(vars(zone), scales = "free", labeller = labeller(zone = zone.labs)) +
+  scale_linetype_manual(values = c("solid", "dashed"), name = "", labels = c("Actual", "Predicted"))
+
+nursery.tanks.exchange.p
+```
+
+### Production Plan
+
+The production plan within the nursery department would appear to follow the following pattern:
+
+Initiate stocking of Zone A, set 1 (four tanks), over period of four days, successively stock set 1 - 4. Approximately 10 days after initial stocking of Zone A, initiate stocking of Zone B, set 1 (four tanks), over period of four days, successively stock set 1 - 4. Approximately 20 days after initial stocking of Zone A, initiate stocking of zone C, set 1 (two tanks), over a period of four days, successively stock set 1 - 4. Approximately 30 days after initial stocking of Zone A, initiate stocking of Zone D, set 1 (two tanks), over a period of four days, successively stock set 1 - 4. 
+
+After ten days, repeat.
+
+``` {r nurseryTotalWater}
+
+nursery.water.requirements <- nursery.prod %>%
+  mutate(zone = case_when(z %in% c("a", "b") ~ "a_b",
+                          z %in% c("c", "d") ~ "c_d")) %>%
+  left_join(nursery.doc.nitrogen, by = c("doc", "zone")) %>%
+  select(-c(protein.sum, tan.mg.l)) %>%
+  mutate(total.new.water = case_when(zone == "a_b" ~ new_water * 4,
+                                     zone == "c_d" ~ new_water * 2),
+         total.exchange.water = case_when(zone == "a_b" ~ exchange_water * 4,
+                                     zone == "c_d" ~ exchange_water * 2),
+         total.tan = case_when(zone == "a_b" ~ tan * 4,
+                                     zone == "c_d" ~ tan * 2),
+         model.exchange.rate = abs(total.tan * 1e6 / (tan.c2 - tan.c1) / 1000),
+         total.water = total.new.water + total.exchange.water,
+         model.water = total.new.water + model.exchange.rate) 
+
+nursery.water.requirements.grouped <- nursery.water.requirements %>%
+  group_by(facility_day) %>%
+  summarise(total.water.sum = sum(total.water),
+            model.water.sum = sum(model.water))
+
+nursery.water.requirements.longer <- nursery.water.requirements.grouped %>%
+  pivot_longer(cols = c(total.water.sum, model.water.sum), names_to = "exchange.classification", values_to = "exchange.rate") %>%
+  mutate(exchange.classification = recode(exchange.classification, "model.water.sum" = "predicted daily", "total.water.sum" = "actual daily"))
+
+nursery.water.requirements.max <- nursery.water.requirements.grouped %>%
+  summarise(max.total.water = max(total.water.sum),
+            max.model.water = max(model.water.sum))
+```
+
+``` {r nurseryTanksModdeledWaterUse, fig.cap = "Sichon nursery tanks modelled water requirements based upon interpretation of production plan", fig.align = "center", fig.dim = c(8,3), dpi = 200}
+
+nursery.water.requirements.p <- nursery.water.requirements.longer %>%
+  filter(facility_day <= 100) %>%
+  ggplot(aes(facility_day, exchange.rate, linetype = exchange.classification)) +
+  geom_line() +
+  labs(x = "Day", y = expression("Water Exchange " ( m^3/day))) +
+  theme_minimal() +
+  scale_linetype_manual(values = c("solid", "dashed"), name = "", labels = c("Actual", "Predicted"))
+
+nursery.water.requirements.p
+```
+
+A comparison of actual water exchange rate versus predicted exchange requirements, based on TAN-N, indicates that actual water exchanges are below predicted requirements. Total water storage currently consists of three 95m^3^ tanks. Modelling has not been undertaken on NH~3~-N due to the complexity of pH interactions, but it should be noted that levels of unionised ammonia can also be reduced by lowering tank pH.
+
+``` {r nurseryWaterExchangeMax, ft.align="center"}
+
+nursery.water.requirements.max %>%
+  flextable() %>%
+  set_header_labels(max.total.water = "Max actual exchange", max.model.water = "Max predicted exchange") %>%
+  colformat_double(digits = 2) %>%
+  autofit() %>%
+  fit_to_width(7.5) %>%
+set_caption(caption = as_paragraph("Sichon Nursery water exchange summary m" , as_sup("3"), "/day"), 
+  style = "Table Caption", 
+  autonum = run_autonum(seq_id = "tab"))
+```
+
+## Maturation
+
+The maturation department has been divided into a main area and E Zone. The main area comprises of broodstock room 1 - 4, spawning room and storage tank room. The E Zone comprises of broodstock room 1 and 2. Each broodstock room contains four tanks of 22m^3^ each. The spawning room and starage tank room contain eight tanks of 12 m^3^ each. 
+
+Male and female shrimp appear to be maintained in separate tanks M01-M08. Feed inputs have been supplied for ~ 6 month period which will be use to perform feed loading calculations for the department and model water consumption requirements.
+
+
+
+```{r maturationLayout, out.width = "85%", fig.cap = "Maturation Layout", fig.align = "center", fig.dim = c(8,3), dpi = 200}
+include_graphics("figs/maturation_layout.pdf") 
+```
+
+
+### Feed types
+
+The information supplied indicates that the broodstock feed is comprised of sandworm and squid. Nutrient composition nor species specified, but assummed to be Perinereis nuntia and Loligo sp. Nutritional composition will be estimated from literature. Feeds are divided into five per day.
+
+Approximate sandworm nutrient composition:
+
+* Moisture 0.788
+* Protein (dry weight) 0.52
+
+Taken from: S. Techaprempreecha et al. 2011. Nutritional Composition of farmed and wild sandworms, Perinereis nuntia. Animal Feed Science and Technology, 169, 265-269.
+
+Approximate Loligo sp. nutrient composition:
+
+* Protein (wet weight) 0.141
+
+Taken from: R. Pratama and I Rostini 2021. Volatile components composition of fresh squid (Loligo sp.). LJARIIE 7 (4) 617-623.
+
+### Feed loading
+
+``` {r maturationFeedLoading}
+
+maturation.feed.loading <- maturation.feed.input %>%
+  mutate(date = dmy(date))
+```
+
+
+
+
+
+# Appendix
+
+## Water System
+
+### Water Quality Physical Parameters
+
+``` {r systemTankPhTable, ft.align="center"}
+
+system.tank.ph.skim %>%
+  select(-c(skim_type, skim_variable, n_missing, complete_rate)) %>%
+  flextable() %>%
+  set_header_labels(skim_variable = "Variable", n_missing = "Missing Data", complete_rate = "Complete rate", numeric.mean = "Mean", numeric.sd = "SD", numeric.p0 = "p0", numeric.p25 = "p25", numeric.p50 = "p50", numeric.p75 = "p75", numeric.p100 = "p100", numeric.hist = "hist") %>%
+  colformat_double(digits = 2) %>%
+  autofit() %>%
+  fit_to_width(7.5) %>%
+set_caption(caption = as_paragraph("Sichon water system tank pH summary"), 
+  style = "Table Caption", 
+  autonum = run_autonum(seq_id = "tab"))
+```
+
+``` {r systemTankAlkTable, ft.align="center"}
+
+system.tank.alk.skim %>%
+  select(-c(skim_type, skim_variable, n_missing, complete_rate)) %>%
+  flextable() %>%
+  set_header_labels(skim_variable = "Variable", n_missing = "Missing Data", complete_rate = "Complete rate", numeric.mean = "Mean", numeric.sd = "SD", numeric.p0 = "p0", numeric.p25 = "p25", numeric.p50 = "p50", numeric.p75 = "p75", numeric.p100 = "p100", numeric.hist = "hist") %>%
+  colformat_double(digits = 2) %>%
+  autofit() %>%
+  fit_to_width(7.5) %>%
+set_caption(caption = as_paragraph("Sichon water summary tank alkalinity summary"), 
+  style = "Table Caption", 
+  autonum = run_autonum(seq_id = "tab"))
+```
+
+``` {r systemTankTANTable, ft.align="center"}
+
+system.tank.tan.skim %>%
+  select(-c(skim_type, skim_variable, n_missing, complete_rate)) %>%
+  flextable() %>%
+  set_header_labels(skim_variable = "Variable", n_missing = "Missing Data", complete_rate = "Complete rate", numeric.mean = "Mean", numeric.sd = "SD", numeric.p0 = "p0", numeric.p25 = "p25", numeric.p50 = "p50", numeric.p75 = "p75", numeric.p100 = "p100", numeric.hist = "hist") %>%
+  colformat_double(digits = 2) %>%
+  autofit() %>%
+  fit_to_width(7.5) %>%
+set_caption(caption = as_paragraph("Sichon water system tank TAN summary"), 
+  style = "Table Caption", 
+  autonum = run_autonum(seq_id = "tab"))
+```
+
+``` {r systemTankClrTable, ft.align="center"}
+
+system.tank.clr.skim %>%
+  select(-c(skim_type, skim_variable, n_missing, complete_rate)) %>%
+  flextable() %>%
+  set_header_labels(skim_variable = "Variable", n_missing = "Missing Data", complete_rate = "Complete rate", numeric.mean = "Mean", numeric.sd = "SD", numeric.p0 = "p0", numeric.p25 = "p25", numeric.p50 = "p50", numeric.p75 = "p75", numeric.p100 = "p100", numeric.hist = "hist") %>%
+  colformat_double(digits = 2) %>%
+  autofit() %>%
+  fit_to_width(7.5) %>%
+set_caption(caption = as_paragraph("Sichon water system tank chlorine summary"), 
+  style = "Table Caption", 
+  autonum = run_autonum(seq_id = "tab"))
+```
+
+### Water Quality Biological Parameters
+
+``` {r systemTankGvcTable, ft.align="center"}
+
+system.tank.gvc.skim %>%
+  select(-c(skim_type, skim_variable, n_missing, complete_rate)) %>%
+  flextable() %>%
+  set_header_labels(skim_variable = "Variable", n_missing = "Missing Data", complete_rate = "Complete rate", numeric.mean = "Mean", numeric.sd = "SD", numeric.p0 = "p0", numeric.p25 = "p25", numeric.p50 = "p50", numeric.p75 = "p75", numeric.p100 = "p100", numeric.hist = "hist") %>%
+  colformat_double(digits = 2) %>%
+  autofit() %>%
+  fit_to_width(7.5) %>%
+set_caption(caption = as_paragraph("Sichon water system tank GVC summary"), 
+  style = "Table Caption", 
+  autonum = run_autonum(seq_id = "tab"))
+```
+
+``` {r systemTankYvcTable, ft.align="center"}
+
+system.tank.yvc.skim %>%
+  select(-c(skim_type, skim_variable, n_missing, complete_rate)) %>%
+  flextable() %>%
+  set_header_labels(skim_variable = "Variable", n_missing = "Missing Data", complete_rate = "Complete rate", numeric.mean = "Mean", numeric.sd = "SD", numeric.p0 = "p0", numeric.p25 = "p25", numeric.p50 = "p50", numeric.p75 = "p75", numeric.p100 = "p100", numeric.hist = "hist") %>%
+  colformat_double(digits = 2) %>%
+  autofit() %>%
+  fit_to_width(7.5) %>%
+set_caption(caption = as_paragraph("Sichon water summary tank YVC summary"), 
+  style = "Table Caption", 
+  autonum = run_autonum(seq_id = "tab"))
+```
+
+## Nursery
+
+### Water Quality Physical Parameters
+
+``` {r nurseryTankPhTable, ft.align="center"}
+
+nursery.tank.ph.skim %>%
+  select(-c(skim_type, skim_variable, n_missing, complete_rate)) %>%
+  flextable() %>%
+  set_header_labels(skim_variable = "Variable", n_missing = "Missing Data", complete_rate = "Complete rate", numeric.mean = "Mean", numeric.sd = "SD", numeric.p0 = "p0", numeric.p25 = "p25", numeric.p50 = "p50", numeric.p75 = "p75", numeric.p100 = "p100", numeric.hist = "hist") %>%
+  colformat_double(digits = 2) %>%
+  autofit() %>%
+  fit_to_width(7.5) %>%
+set_caption(caption = as_paragraph("Sichon nursery tank pH summary"), 
+  style = "Table Caption", 
+  autonum = run_autonum(seq_id = "tab"))
+```
+
+
+``` {r nurseryTankAlkTable, ft.align="center"}
+
+nursery.tank.alk.skim %>%
+  select(-c(skim_type, skim_variable, n_missing, complete_rate)) %>%
+  flextable() %>%
+  set_header_labels(skim_variable = "Variable", n_missing = "Missing Data", complete_rate = "Complete rate", numeric.mean = "Mean", numeric.sd = "SD", numeric.p0 = "p0", numeric.p25 = "p25", numeric.p50 = "p50", numeric.p75 = "p75", numeric.p100 = "p100", numeric.hist = "hist") %>%
+  colformat_double(digits = 2) %>%
+  autofit() %>%
+  fit_to_width(7.5) %>%
+set_caption(caption = as_paragraph("Sichon nursery tank alkalinity summary"), 
+  style = "Table Caption", 
+  autonum = run_autonum(seq_id = "tab"))
+```
+
+``` {r nurseryTankTanTable, ft.align="center"}
+
+nursery.tank.tan.skim %>%
+  select(-c(skim_type, skim_variable, n_missing, complete_rate)) %>%
+  flextable() %>%
+  set_header_labels(skim_variable = "Variable", n_missing = "Missing Data", complete_rate = "Complete rate", numeric.mean = "Mean", numeric.sd = "SD", numeric.p0 = "p0", numeric.p25 = "p25", numeric.p50 = "p50", numeric.p75 = "p75", numeric.p100 = "p100", numeric.hist = "hist") %>%
+  colformat_double(digits = 2) %>%
+  autofit() %>%
+  fit_to_width(7.5) %>%
+set_caption(caption = as_paragraph("Sichon nursery tank TAN summary"), 
+  style = "Table Caption", 
+  autonum = run_autonum(seq_id = "tab"))
+```
+
+``` {r nurseryTankNH3Table, ft.align="center"}
+
+nursery.tank.nh3.skim %>%
+  select(-c(skim_type, skim_variable, n_missing, complete_rate)) %>%
+  flextable() %>%
+  set_header_labels(skim_variable = "Variable", n_missing = "Missing Data", complete_rate = "Complete rate", numeric.mean = "Mean", numeric.sd = "SD", numeric.p0 = "p0", numeric.p25 = "p25", numeric.p50 = "p50", numeric.p75 = "p75", numeric.p100 = "p100", numeric.hist = "hist") %>%
+  colformat_double(digits = 2) %>%
+  autofit() %>%
+  fit_to_width(7.5) %>%
+set_caption(caption = as_paragraph("Sichon nursery tank NH", as_sub("3"), "summary"), 
+  style = "Table Caption", 
+  autonum = run_autonum(seq_id = "tab"))
+```
+
+``` {r nurseryTankNO2Table, ft.align="center"}
+
+nursery.tank.no2.skim %>%
+  select(-c(skim_type, skim_variable, n_missing, complete_rate)) %>%
+  flextable() %>%
+  set_header_labels(skim_variable = "Variable", n_missing = "Missing Data", complete_rate = "Complete rate", numeric.mean = "Mean", numeric.sd = "SD", numeric.p0 = "p0", numeric.p25 = "p25", numeric.p50 = "p50", numeric.p75 = "p75", numeric.p100 = "p100", numeric.hist = "hist") %>%
+  colformat_double(digits = 2) %>%
+  autofit() %>%
+  fit_to_width(7.5) %>%
+set_caption(caption = as_paragraph("Sichon nursery tank NO", as_sub("2"), "summary"), 
+  style = "Table Caption", 
+  autonum = run_autonum(seq_id = "tab"))
+```
+
+### Water Quality Biological Parameters
+
+``` {r nurseryTankGvcTable, ft.align="center"}
+
+ntgvc <- water.quality23.join %>% filter(department.y == "Nursery")
+nursery.tanks <- unique(ntgvc$tank) %>%
+  str_sort() 
+
+nursery.tanks.sub <- nursery.tanks[1:45]
+
+nursery.tank.gvc.skim %>%
+  select(-c(skim_type, skim_variable, n_missing, complete_rate)) %>%
+  filter(tank %in% nursery.tanks.sub) %>%
+  flextable() %>% 
+  set_header_labels(skim_variable = "Variable", n_missing = "Missing Data", complete_rate = "Complete rate", numeric.mean = "Mean", numeric.sd = "SD", numeric.p0 = "p0", numeric.p25 = "p25", numeric.p50 = "p50", numeric.p75 = "p75", numeric.p100 = "p100", numeric.hist = "hist") %>%
+  colformat_double(digits = 2) %>%
+  autofit() %>%
+  fit_to_width(7.5) %>%
+set_caption(caption = as_paragraph("Sichon nursery tank GVC summary"), 
+  style = "Table Caption", 
+  autonum = run_autonum(seq_id = "tab"))
+```
+
+``` {r nurseryTankYvcTable, ft.align="center"}
+
+
+nursery.tank.yvc.skim %>%
+  select(-c(skim_type, skim_variable, n_missing, complete_rate)) %>%
+  filter(tank %in% nursery.tanks.sub) %>%
+  flextable() %>% 
+  set_header_labels(skim_variable = "Variable", n_missing = "Missing Data", complete_rate = "Complete rate", numeric.mean = "Mean", numeric.sd = "SD", numeric.p0 = "p0", numeric.p25 = "p25", numeric.p50 = "p50", numeric.p75 = "p75", numeric.p100 = "p100", numeric.hist = "hist") %>%
+  colformat_double(digits = 2) %>%
+  autofit() %>%
+  fit_to_width(7.5) %>%
+set_caption(caption = as_paragraph("Sichon nursery tank YVC summary"), 
+  style = "Table Caption", 
+  autonum = run_autonum(seq_id = "tab"))
+```
+
+``` {r nurseryTankLbTable, ft.align="center"}
+
+
+nursery.tank.lb.skim %>%
+  select(-c(skim_type, skim_variable, n_missing, complete_rate)) %>%
+  filter(tank %in% nursery.tanks.sub) %>%
+  flextable() %>% 
+  set_header_labels(skim_variable = "Variable", n_missing = "Missing Data", complete_rate = "Complete rate", numeric.mean = "Mean", numeric.sd = "SD", numeric.p0 = "p0", numeric.p25 = "p25", numeric.p50 = "p50", numeric.p75 = "p75", numeric.p100 = "p100", numeric.hist = "hist") %>%
+  colformat_double(digits = 2) %>%
+  autofit() %>%
+  fit_to_width(7.5) %>%
+set_caption(caption = as_paragraph("Sichon nursery tank LB summary"), 
+  style = "Table Caption", 
+  autonum = run_autonum(seq_id = "tab"))
+```
+
+## Maturation
+
+### Water Quality Physical Parameters
+
+``` {r maturationTankAlkTable, ft.align="center"}
+
+maturation.tank.alk.skim %>%
+  select(-c(skim_type, skim_variable, n_missing, complete_rate)) %>%
+  flextable() %>%
+  set_header_labels(skim_variable = "Variable", n_missing = "Missing Data", complete_rate = "Complete rate", numeric.mean = "Mean", numeric.sd = "SD", numeric.p0 = "p0", numeric.p25 = "p25", numeric.p50 = "p50", numeric.p75 = "p75", numeric.p100 = "p100", numeric.hist = "hist") %>%
+  colformat_double(digits = 2) %>%
+  autofit() %>%
+  fit_to_width(7.5) %>%
+set_caption(caption = as_paragraph("Sichon maturation tanks alkalinity summary"), 
+  style = "Table Caption", 
+  autonum = run_autonum(seq_id = "tab"))
+```
+
+``` {r maturationTankTanTable, ft.align="center"}
+
+maturation.tank.tan.skim %>%
+  select(-c(skim_type, skim_variable, n_missing, complete_rate)) %>%
+  flextable() %>%
+  set_header_labels(skim_variable = "Variable", n_missing = "Missing Data", complete_rate = "Complete rate", numeric.mean = "Mean", numeric.sd = "SD", numeric.p0 = "p0", numeric.p25 = "p25", numeric.p50 = "p50", numeric.p75 = "p75", numeric.p100 = "p100", numeric.hist = "hist") %>%
+  colformat_double(digits = 2) %>%
+  autofit() %>%
+  fit_to_width(7.5) %>%
+set_caption(caption = as_paragraph("Sichon maturation tanks TAN summary"), 
+  style = "Table Caption", 
+  autonum = run_autonum(seq_id = "tab"))
+```
+
+``` {r maturationTankNH3Table, ft.align="center"}
+
+maturation.tank.nh3.skim %>%
+  select(-c(skim_type, skim_variable, n_missing, complete_rate)) %>%
+  flextable() %>%
+  set_header_labels(skim_variable = "Variable", n_missing = "Missing Data", complete_rate = "Complete rate", numeric.mean = "Mean", numeric.sd = "SD", numeric.p0 = "p0", numeric.p25 = "p25", numeric.p50 = "p50", numeric.p75 = "p75", numeric.p100 = "p100", numeric.hist = "hist") %>%
+  colformat_double(digits = 2) %>%
+  autofit() %>%
+  fit_to_width(7.5) %>%
+set_caption(caption = as_paragraph("Sichon nursery tank NH", as_sub("3"), "summary"), 
+  style = "Table Caption", 
+  autonum = run_autonum(seq_id = "tab"))
+```
+
+
+``` {r maturationTankNO2Table, ft.align="center"}
+
+maturation.tank.no2.skim %>%
+  select(-c(skim_type, skim_variable, n_missing, complete_rate)) %>%
+  flextable() %>%
+  set_header_labels(skim_variable = "Variable", n_missing = "Missing Data", complete_rate = "Complete rate", numeric.mean = "Mean", numeric.sd = "SD", numeric.p0 = "p0", numeric.p25 = "p25", numeric.p50 = "p50", numeric.p75 = "p75", numeric.p100 = "p100", numeric.hist = "hist") %>%
+  colformat_double(digits = 2) %>%
+  autofit() %>%
+  fit_to_width(7.5) %>%
+set_caption(caption = as_paragraph("Sichon nursery tank NO", as_sub("2"), "summary"), 
+  style = "Table Caption", 
+  autonum = run_autonum(seq_id = "tab"))
+```
+
+``` {r maturationTankTempTable, ft.align="center"}
+
+maturation.tank.temp.skim %>%
+  select(-c(skim_type, skim_variable, n_missing, complete_rate)) %>%
+  flextable() %>%
+  set_header_labels(skim_variable = "Variable", n_missing = "Missing Data", complete_rate = "Complete rate", numeric.mean = "Mean", numeric.sd = "SD", numeric.p0 = "p0", numeric.p25 = "p25", numeric.p50 = "p50", numeric.p75 = "p75", numeric.p100 = "p100", numeric.hist = "hist") %>%
+  colformat_double(digits = 2) %>%
+  autofit() %>%
+  fit_to_width(7.5) %>%
+set_caption(caption = as_paragraph("Sichon maturation tanks temperature summary"), 
+  style = "Table Caption", 
+  autonum = run_autonum(seq_id = "tab"))
+```
+
+### Water Quality Biological Parameters
+
+``` {r maturationTankGvcTable, ft.align="center"}
+
+mtgvc <- water.quality23.join %>% filter(department.y == "Maturation")
+maturation.tanks <- unique(mtgvc$tank) %>%
+  str_sort() 
+
+maturation.tanks.sub <- maturation.tanks[1:42]
+
+maturation.tank.gvc.skim %>%
+  select(-c(skim_type, skim_variable, n_missing, complete_rate)) %>%
+  filter(tank %in% maturation.tanks.sub) %>%
+  flextable() %>%
+  set_header_labels(skim_variable = "Variable", n_missing = "Missing Data", complete_rate = "Complete rate", numeric.mean = "Mean", numeric.sd = "SD", numeric.p0 = "p0", numeric.p25 = "p25", numeric.p50 = "p50", numeric.p75 = "p75", numeric.p100 = "p100", numeric.hist = "hist") %>%
+  colformat_double(digits = 2) %>%
+  autofit() %>%
+  fit_to_width(7.5) %>%
+set_caption(caption = as_paragraph("Sichon maturation tanks GVC summary"), 
+  style = "Table Caption", 
+  autonum = run_autonum(seq_id = "tab"))
+```
+
+``` {r maturationTankYvcTable, ft.align="center"}
+
+maturation.tank.yvc.skim %>%
+  select(-c(skim_type, skim_variable, n_missing, complete_rate)) %>%
+  filter(tank %in% maturation.tanks.sub) %>%
+  flextable() %>%
+  set_header_labels(skim_variable = "Variable", n_missing = "Missing Data", complete_rate = "Complete rate", numeric.mean = "Mean", numeric.sd = "SD", numeric.p0 = "p0", numeric.p25 = "p25", numeric.p50 = "p50", numeric.p75 = "p75", numeric.p100 = "p100", numeric.hist = "hist") %>%
+  colformat_double(digits = 2) %>%
+  autofit() %>%
+  fit_to_width(7.5) %>%
+set_caption(caption = as_paragraph("Sichon maturation tanks YVC summary"), 
+  style = "Table Caption", 
+  autonum = run_autonum(seq_id = "tab"))
+```
+
+
+``` {r maturationTankLbTable, ft.align="center"}
+
+maturation.tank.lb.skim %>%
+  select(-c(skim_type, skim_variable, n_missing, complete_rate)) %>%
+  filter(tank %in% maturation.tanks.sub) %>%
+  flextable() %>%
+  set_header_labels(skim_variable = "Variable", n_missing = "Missing Data", complete_rate = "Complete rate", numeric.mean = "Mean", numeric.sd = "SD", numeric.p0 = "p0", numeric.p25 = "p25", numeric.p50 = "p50", numeric.p75 = "p75", numeric.p100 = "p100", numeric.hist = "hist") %>%
+  colformat_double(digits = 2) %>%
+  autofit() %>%
+  fit_to_width(7.5) %>%
+set_caption(caption = as_paragraph("Sichon maturation tanks LB summary"), 
+  style = "Table Caption", 
+  autonum = run_autonum(seq_id = "tab"))
+```
+
+
+Summary data allows a quick visualisation for areas worth further investigation - pH looks OK, probably worth looking at values in maturation and leave it at that. Salinity variable - but not really a major issue for health. Alk - is that a typo, check the data type and see if it is an isolated figure. TAN - looks like a serious problem. This is where the focus is likely to be so far. Investigate tanks individually  - is it a common problem or isolated. Also plot detailed histogram for better visualisation of parameter distribution.
+
+## Example plot
+
+``` {r nurseryTank1tan, fig.cap = "TAN (mg/l) within Sichon nursery tank 1.", fig.align = "center", fig.dim = c(8,3), dpi = 200}
+
+tan.plot.nursery.1 <- water.quality23.join %>%
+  filter(department.x == "Nursery" & tank == "1") %>%
+  ggplot(aes(date, tan)) +
+  geom_line() +
+  geom_hline(yintercept = c(1, 3), linetype = c("dashed", "dotted"),
+             color = c("orange", "red"), size = 1.2) +
+  xlab("Date") +
+  ylab("TAN (mg/l)") +
+  theme_minimal()
+
+tan.plot.nursery.1
+```
+
+```{r tanDensityHistNursery, fig.cap = "Density histogram summarising frequency distribution of TAN (mg/l) as recorded in Sichon nursery.", fig.align = "center", fig.dim = c(8,3), dpi = 200}
+
+freqDistNurTAN <- tan.plot.nursery.1 <- water.quality23.join %>%
+  filter(department.x == "Nursery" & tank == "1") %>%
+  ggplot(aes(x=tan, )) +
+  geom_histogram(aes(y=..density..), binwidth = 0.5, alpha=0.4, position="identity") +
+  geom_density(alpha=0.2, bw = 0.5) +
+  geom_vline(xintercept = c(1, 3), linetype = c("dashed", "dotted"),
+             color = c("orange", "red"), size = 1.2) +
+  labs(x="TAN (mg/l)", y = "Frequency") +
+  theme_minimal()
+
+freqDistNurTAN
+```
+
+I wonder what time of day that the water quality readings are taken (just before the water exchange?)
+
+  
+  
+  
+  
+  
+
+
+
+
+
+
