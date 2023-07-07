@@ -3,7 +3,7 @@ title: "Sichon AES Supporting Material"
 author: "AES Technical"
 date: "`r Sys.Date()`"
 output:
-  bookdown::html_document2:
+  bookdown::word_document2:
      fig_caption: yes
      number_sections: yes
 ---
@@ -105,12 +105,12 @@ Water quality data will be summarised for each of the three main areas using sum
 
 Water quality data has been subdivided into physical and biological variables.
 
-Physical parameters:
+Physical parameters: ppm is equivalent to mg/l 
 
 * pH
 * Salinity (ppt)
 * Alkalinity (ppm)
-* TAN (ppm - equivalent to mg/l)
+* TAN ( mg/l)
 * NH~4~ (ppm)
 * NH~3~ (ppm)
 * NO~2~^-^ (ppm)
@@ -128,13 +128,19 @@ Biological parameters:
 * Luminescent bacteria
 * H~2~S producing bacteria discounted as results indicate zero presence
 
-Water quality parameters ranges have been classified using a traffic light scheme of green, amber and red to indicate whether the variable is within acceptable limits. These limits are dependent upon the department. Comments will be made for each variable within each department highlighting if the variable is seen to be within the green,  amber or red classifications. Where occurunces are observed above optimal conditions, number of occurrences will be reported - each occurrence represents one tank day, although realistically each variable measured represents a snapshot of the conditions on any given day due to the potential for rapid change in water quality parameters/ bacterial counts. 
+Water quality parameters ranges have been classified using a traffic light scheme of green, amber and red to indicate whether the variable is within acceptable limits. These limits are dependent upon the department. Comments will be made for each variable within each department highlighting if the variable is seen to be within the green,  amber or red classifications. 
+
+Where occurrences are observed above optimal conditions, number of occurrences will be reported - each occurrence represents one tank day, although realistically each variable measured represents a snapshot of the conditions on any given day due to the potential for rapid change in water quality parameters/ bacterial counts. 
+
+Summaries of water quality parameters (per tank identification) have been added to the appendix, these were generated to observe if water quality parameters were similar between tanks. 
+
+Where a variable has been plotted against date, the shaded area of the chart represents the range of values that are considered to be in the 'green' classification. Values with the range bounded by dashed lines are considered to be in the 'amber' classification. Values outside of the shaded area and outside of the area bounded by dashed lines are considered to be in the 'red' classification.
 
 ## Water System
 
 ### Water Quality Physical Parameters
 
-Note that DO and temperature have been excluded from the table as data does not appear to include these variables. The columns p0 - p100 indicate the range of data and the interquartile values, p50 therefore indicates the median value and is likely to be a more representative average value than the mean (which may be influenced to a greater degree by extreme values).
+Note that DO and temperature have been excluded from the table as data does not appear to include these variables. The columns p0 - p100 indicate the range of data and the interquartile values, p50 therefore indicates the median value and is likely to be a more representative average value than the mean (which may be influenced to a greater degree by extreme values). 
 
 ``` {r skimWaterQualityPhysicalWS}
 
@@ -215,9 +221,13 @@ system.tankR1.ph.p <- water.quality23.join %>%
 system.tankR1.ph.p
 ```
 
+Comment: No action considered necessary at present, pH dosing control could be added to R4/5 if deemed advantageous.
+
 #### Salinity
 
 Salinity range not defined by traffic light system, appears to be within suitable range for shrimp.
+
+Comment: No action considered necessary at present.
 
 #### Alkalinity
 
@@ -275,6 +285,8 @@ system.tankR1.alk.p <- water.quality23.join %>%
 system.tankR1.alk.p
 ```
 
+Comment: Action likely to be required if optimal range is to be maintained. However, alkalinity reduction is not necessarily a simple procedure and alkalinity levels observed are unlikely to cause significant welfare issues.
+
 #### TAN
 
 ``` {r waterSystemTAN}
@@ -331,13 +343,19 @@ system.tankR1.tan.p <- water.quality23.join %>%
 system.tankR1.tan.p
 ```
 
+Comment: Single high TAN sample appears to be an anomaly, no action currently required. 
+
 #### NH~3~
 
 NH~3~; green <0.16, amber 0.17-0.3, red >0.3. Classification not defined for values 0.16- <0.17, amber range modified to 0.16-0.3 for the purposes of this analysis. NH~3~ within desired range.
 
+Comment: No action currently required.
+
 #### NO~2~
 
 NO~2~; green <0.5, amber 0.51-0.8, red >0.8. Amber classification modified to 0.5-0.8 for the purposes of this analysis. NO~2~ within desired range.
+
+Comment: No action currently required.
 
 #### Chlorine
 
@@ -354,7 +372,7 @@ ws.clr.red <- water.quality23.join %>%
 
 ```
 
-Clr range not defined by traffic light system. A quick literature search indicates safe levels of residual chlorine to be 0.24mg/l, 0.48mg/l and 0.57mg/l at salinities of 15ppt, 25ppt and 35ppt respectively. Levels typically appropriate, but check with neutralisation protocol to ensure this. (Cheng S-Y et al. 2013. Acute toxicity of residual chlorine on the white shrimp Litopeneaus vannamei juveniles at different salinity levels. J. Fish. Soc. Taiwan, 40(3): 183-191.)
+Clr range not defined by traffic light system. A quick literature search indicates safe levels of residual chlorine to be 0.24mg/l, 0.48mg/l and 0.57mg/l at salinities of 15ppt, 25ppt and 35ppt respectively. (Cheng S-Y et al. 2013. Acute toxicity of residual chlorine on the white shrimp Litopeneaus vannamei juveniles at different salinity levels. J. Fish. Soc. Taiwan, 40(3): 183-191.)
 
 Occurrences of clr within recommended range in Water system: `r length(ws.clr.green$clr)`
 
@@ -389,9 +407,13 @@ system.tankR1.clr.p <- water.quality23.join %>%
 system.tankR1.clr.p
 ```
 
+Comment: Levels typically appropriate, but check with neutralisation protocol to ensure consistency.
+
 #### Calcium / Magnesium
 
-Ca~2~: Mg~2~ ratio; this ratio seems to have been seldom calculated in the data supplied. In the trafic light scheme it is reported as Ca:Mg green >3, amber 2-2.9, red <1.9. A quick review of the literature indicates that Mg:Ca ratio of 3:1 is recommended for better survival and growth when cultured in low salinity water (Aruna S and Felix S  2017. The effect of ionic concentration of low saline waters on growth characteristics of Peneaus Vannamei. International Journal of Fisheries and Aquatic Studies, 5(3): 73-76.) Please check with protocol to ensure correct calculation and appropriate action.
+Ca~2~: Mg~2~ ratio; this ratio seems to have been seldom calculated in the data supplied. In the trafic light scheme it is reported as Ca:Mg green >3, amber 2-2.9, red <1.9. A quick review of the literature indicates that Mg:Ca ratio of 3:1 is recommended for better survival and growth when cultured in low salinity water (Aruna S and Felix S  2017. The effect of ionic concentration of low saline waters on growth characteristics of Peneaus Vannamei. International Journal of Fisheries and Aquatic Studies, 5(3): 73-76.) 
+
+Comment: Please check with protocol to ensure correct calculation and appropriate action.
 
 ***
 
@@ -419,6 +441,7 @@ set_caption(caption = as_paragraph("Biological water quality summary statistics 
   style = "Table Caption", 
   autonum = run_autonum(seq_id = "tab"))
 ```
+
 #### Green vibrio
 
 ``` {r waterSystemGVC}
@@ -470,6 +493,8 @@ system.tankR1.gvc.p <- water.quality23.join %>%
 
 system.tankR1.gvc.p
 ```
+
+Comment: Ensure water sterilisation protocol is followed, adapt to changes in environmental conditions, salinity/ rainfall events.
 
 #### Yellow vibrio
 
@@ -526,13 +551,19 @@ system.tankR4.yvc.p <- water.quality23.join %>%
 system.tankR4.yvc.p
 ```
 
+Comment: Ensure water sterilisation protocol is followed, adapt to changes in environmental conditions, salinity/ rainfall events.
+
 #### Total vibrio
 
 Total vibrio count not classified by traffic light system and discounted due to relative importance of lower green vibrio count requirement.
 
+Comment: No action currently required.
+
 #### Luminescent bacteria
 
 Luminescent bacteria; not classified by traffic light system, classified in monthly reporting as ranges of 100-1000 CFU/ml, 1001-30,000 CFU/ml and > 30,000 CFU/ml. No bacteria of this class identified within this department.
+
+Comment: No action currently required.
 
 ***
 
@@ -621,9 +652,13 @@ nursery.tank1.ph.p <- water.quality23.join %>%
 nursery.tank1.ph.p
 ```
 
+Comment: No action currently required.
+
 #### Salinity
 
 Salinity range not defined by traffic light system, appears to be within suitable range for shrimp.
+
+Comment: No action currently required.
 
 #### Alkalinity
 
@@ -644,7 +679,7 @@ nursery.alk.red <- water.quality23.join %>%
 
 ```
 
-Alkalinity; green 150-200, amber 110-149 or 201-240, red <110 or >240. Less than 50% of results within the green classification, alkalinity appears to be higher than desired for a large proportion of the time. Alkalinity stress may result in lower growth rates and down-regulation of immune related genes.
+Alkalinity; green 150-200, amber 110-149 or 201-240, red <110 or >240. Less than 50% of results within the green classification, alkalinity appears to be higher than desired for a large proportion of the time. Alkalinity stress may result in lower growth rates and down-regulation of immune related genes, this is more likely to occur at extreme levels.
 
 Occurrences of alkalinity within green classification range in Nursery: `r length(nursery.alk.green$alkalinity)`
 
@@ -681,6 +716,10 @@ nursery.tank1.alk.p <- water.quality23.join %>%
 nursery.tank1.alk.p
 ```
 
+Comment: Alkalinity frequently outside of desired range, some exceeding 300mg/l. Research suggests that zootechnical performance may not be effected at levels up to 300 mg/l. Furtado S. et al. 2015. The effect of different alkalinity levels on Litopeneaus vannamei reaerd with biofloc technology (BFT). Aquaculture International, 23, 345-358. 
+
+Consider: Focused literature review of effect of alkalinity on zootechnical performance and determine if current classification is appropriate. If current classification is appropriate, action will be required to reduce alkalinity levels.
+
 #### TAN
 
 ``` {r nurseryTAN}
@@ -700,7 +739,7 @@ nursery.tan.red <- water.quality23.join %>%
 
 ```
 
-TAN; green <1, amber 1.1-3, red >3. TAN range of 1.0-<1.1 not defined in classification range; amber range modified to 1 - 3 for this analysis. Less than 20% of the results within the green classification and 50% of the results within the red classification. Cause for concern, investigate in greater detail.
+TAN; green <1, amber 1.1-3, red >3. TAN range of 1.0-<1.1 not defined in classification range; amber range modified to 1 - 3 for this analysis. Less than 20% of the results within the green classification and 50% of the results within the red classification. 
 
 Occurrences of TAN within green classification range in Nursery: `r length(nursery.tan.green$tan)`
 
@@ -737,6 +776,10 @@ nursery.tank1.tan.p <- water.quality23.join %>%
 nursery.tank1.tan.p
 ```
 
+Comment: TAN frequently exceeds desired range, cause for concern, investigate in greater detail (addressed later in report).
+
+Consider: Increase water exchange to tanks.
+
 #### NH~3~
 
 ``` {r nurseryNH3}
@@ -756,7 +799,7 @@ nursery.nh3.red <- water.quality23.join %>%
 
 ```
 
-NH~3~; green <0.16, amber 0.17-0.3, red >0.3. Classification not defined for values 0.16- <0.17, amber range modified to 0.16-0.3 for the purposes of this analysis. Less than 25% of results within green classification, greater than 50% of results within red classification. Salinity impacts toxicity of NH~3~, 24, 48, 72, 96h LC50 values considered at 25ppt salinity considered to be 2.93, 2.16, 1.91, 1.57 mg/l. Upper value of 6.2 may be made in error. Ammonia management is required, depression in immune response due to ammonia stress may increase susceptibility to vibrio.
+NH~3~; green <0.16, amber 0.17-0.3, red >0.3. Classification not defined for values 0.16- <0.17, amber range modified to 0.16-0.3 for the purposes of this analysis. Less than 25% of results within green classification, greater than 50% of results within red classification. Salinity impacts toxicity of NH~3~, 24, 48, 72, 96h LC50 values at 25ppt salinity considered to be 2.93, 2.16, 1.91, 1.57 mg/l. Upper value of 6.2 may be made in error. 
 
 Occurrences of NH~3~ within green classification range in Nursery: `r length(nursery.nh3.green$nh3)`
 
@@ -791,6 +834,10 @@ nursery.tank1.nh3.p <- water.quality23.join %>%
 
 nursery.tank1.nh3.p
 ```
+
+Comment: Ammonia management is required, depression in immune response due to ammonia stress may also increase susceptibility to vibrio.
+
+Consider: Increase water exchange to tanks.
 
 #### NO~2~
 
@@ -847,13 +894,21 @@ nursery.tank10.no2.p <- water.quality23.join %>%
 nursery.tank10.no2.p
 ```
 
+Comment: Level generally within desired range, occasional spikes well above proposed safety levels of single exposure at 0.53 mg/l. Note that when in mixture, the proposed level of safe values may be reduced (Valencia-Castañeda G. et al 2019. Toxicity of ammonia, nitrite and nitrate to Litopeneaus vannamei juveniles in low-salinity water in single and ternary exposure experiments and their environmental implications. Environmental Toxicology and Pharmacology, 70, 1-8)
+
+Consider: Increase water exchange to tanks.
+
 #### DO
 
 DO; green ≥5, amber 4, red ≤3. All results within green classification.
 
+Comment: No action currently required.
+
 #### Temp
 
 Temp; green 29-32, amber 26-28 or 33-34, red <25 or > 35. All results within green classification.
+
+Comment: No action currently required.
 
 #### Calcium / magnesium
 
@@ -939,6 +994,7 @@ nursery.tank5.gvc.p <- water.quality23.join %>%
 
 nursery.tank5.gvc.p
 ```
+Comment: GVC count frequently exceeding desired level. Water system GVC level was consistent with desired level, but indicated presence at low level. Investigate propagation of GVC or introduction via feed (artemia for example). Also investigate potential correlation with water quality variables that may compromise immune response (e.g. ammonia).
 
 #### Yellow vibrio
 
@@ -997,6 +1053,8 @@ nursery.tank5.yvc.p <- water.quality23.join %>%
 nursery.tank5.yvc.p
 ```
 
+Comment: YVC count frequently exceeding desired level. Water system YVC level was consistent with desired level, but indicated presence at low level. As with GVC, investigate propagation of YVC or introduction via feed (artemia for example). Also investigate potential correlation with water quality variables that may compromise immune response (e.g. ammonia).
+
 #### Luminescent bacteria
 
 ``` {r nurseryLB}
@@ -1054,20 +1112,22 @@ nursery.tank5.lb.p <- water.quality23.join %>%
 nursery.tank5.lb.p
 ```
 
+Comment: Luminescent bacteria not detected in water system, but exceeds desired range in nursery department on four occasions, identify source.
+
 ***
 
 ## Maturation
 
 ### Water Quality Physical Parameters
 
-Note that Clr, Ca~2~ and Mg~2~ have been excluded from the table as data does not appear to include these variables. The columns p0 - p100 indicate the range of data and the interquartile values, p50 therefore indicates the median value and is likely to be a more representative average value than the mean (which may be influenced to a greater degree by extreme values).
+Note that Clr, Ca~2~^+^ and Mg~2~^+^ have been excluded from the table as data does not appear to include these variables. The columns p0 - p100 indicate the range of data and the interquartile values, p50 therefore indicates the median value and is likely to be a more representative average value than the mean (which may be influenced to a greater degree by extreme values).
 
 ``` {r skimWaterQualityPhysicalM}
 
 # summarise water quality data
 # tan
 wqp.maturation.summary <- water.quality23.join %>%
-  filter(department.x == "Maturation") %>%
+  filter(department.x == "Maturation" & !detail.x == "Water Stock - Mat.") %>%
   skim(ph, salinity, alkalinity, tan, nh4, nh3, no2, do, temp) %>%
   select(-c(skim_type, n_missing, complete_rate))
 ```
@@ -1089,9 +1149,13 @@ set_caption(caption = as_paragraph("Physical water quality summary statistics fo
 
 pH; green 7.8-8.3, amber 7.1-7.7 or 8.4-8.7, red <7.0 or >8.7. All results within green classification.
 
+Comment: No action currently required.
+
 #### Salinity
 
 Salinity range not defined by traffic light system, appears to be within suitable range for shrimp.
+
+Comment: No action currently required.
 
 #### Alkalinity
 
@@ -1149,6 +1213,8 @@ maturation.tank1.alk.p <- water.quality23.join %>%
 maturation.tank1.alk.p
 ```
 
+Comment: Alkalinity frequently outside of desired range as observed in nursery department (but with smaller range).
+
 #### TAN
 
 ``` {r maturationTAN}
@@ -1205,6 +1271,10 @@ maturation.tank13.tan.p <- water.quality23.join %>%
 maturation.tank13.tan.p
 ```
 
+Comment: TAN frequently exceeds desired range, cause for concern, investigate in greater detail (addressed later in report).
+
+Consider: Increase water exchange to tanks.
+
 #### NH~3~
 
 ``` {r maturationNH3}
@@ -1259,6 +1329,8 @@ maturation.tank2.nh3.p <- water.quality23.join %>%
 
 maturation.tank2.nh3.p
 ```
+
+Comment: NH~3~ generally within the desired level. Some high level results.
 
 #### NO~2~
 
@@ -1315,9 +1387,15 @@ maturation.tank4.no2.p <- water.quality23.join %>%
 maturation.tank4.no2.p
 ```
 
+Comment: Results frequently exceed green and amber upper limit. Concern that mixture of NH~3~-N, NO~2~-N and NO~3~-N has greater combined toxic effect.
+
+Consider: Increase volume/ frequency of water exchange.
+
 #### DO
 
 DO; green ≥5, amber 4, red ≤3. All results within green classification.
+
+Comment: No action currently required.
 
 #### Temp
 
@@ -1374,9 +1452,11 @@ maturation.tank1.temp.p <- water.quality23.join %>%
 maturation.tank1.temp.p
 ```
 
+Comment: Temperature drops below optimal level by aproximately 1 ^o^C during three month period. Is this sufficient cause for insulation/ heat regulation?
+
 #### Calcium / magnesium
 
-Ca~2~: Mg~2~ ratio; this ratio seems to have been seldom calculated in the data supplied.
+Ca~2~^+^: Mg~2~^+^ ratio; this ratio seems to have been seldom calculated in the data supplied.
 
 ***
 
@@ -1387,7 +1467,7 @@ Ca~2~: Mg~2~ ratio; this ratio seems to have been seldom calculated in the data 
 # summarise water quality data
 # tan
 wqb.maturation.summary <- water.quality23.join %>%
-  filter(department.x == "Maturation") %>%
+  filter(department.x == "Maturation" & !tank == "ST") %>%
   skim(gvc, yvc, tvc, lb) %>%
   select(-c(skim_type, n_missing, complete_rate))
 ```
@@ -1436,7 +1516,7 @@ maturation.tank.gvc.skim <- water.quality23.join %>%
   skim(gvc)
 ```
 
-Variation in counts among tank groups; tanks sandworms and nauplii tanks appear high.  Time series indicates a maturation tank (16) with a typical p0-p75 with a high maximum value of 30,000.
+Variation in counts among tank groups; tanks sandworms and nauplii tanks appear high (see summary table in appendix).  Time series indicates a maturation tank (16) with a typical p0-p75 with a high maximum value of 30,000.
 
 ``` {r maturationTank15GVC, fig.cap = "Sichon maturation tank 16 GVC time series", fig.align = "center", fig.dim = c(8,3), dpi = 200}
 
@@ -1458,6 +1538,10 @@ maturation.tank16.gvc.p <- water.quality23.join %>%
 
 maturation.tank16.gvc.p
 ```
+
+Comment: Frequent bacteria count above amber upper limit. Live sandworm possible source.
+
+Consider: Review sterilisation procedure for sandworm and determine if modification required.
 
 #### Yellow vibrio
 
@@ -1516,6 +1600,10 @@ maturation.tank10.yvc.p <- water.quality23.join %>%
 maturation.tank10.yvc.p
 ```
 
+Comment: YVC frequently exceeds green upper limit, but infrequent (one instance) red level.
+
+Consider: Similar to GVC concern, identify source and modify sterilisation/ biosecurity procedure.
+
 #### Luminescent bacteria
 
 ``` {r maturationLB}
@@ -1572,6 +1660,8 @@ maturation.tank4.lb.p <- water.quality23.join %>%
 
 maturation.tank4.lb.p
 ```
+
+Comment: No action required.
 
 ***
 
@@ -1901,9 +1991,9 @@ set_caption(caption = as_paragraph("Sichon nursery maximum tank TAN kg/day"),
   autonum = run_autonum(seq_id = "tab"))
 ```
 
-The understanding is that tank water exchanges are performed once per day when tank cleaning is also undertaken. Six feeds are given per day, at even intervals. There is the potential for TAN-N to accumulate during the day as feed is progressively metabolised. One can predict the maximum level of accumulated TAN-N from two perspectives (starting the tank at a theoretical starting point of zero, or estimating residual TAN-N from the previous day post water exchange). Maximum daily water exchanges appear to be 55% of tank volume.
+The understanding is that tank water exchanges are performed once per day when tank cleaning is also undertaken. Six feeds are given per day, at even intervals. There is the potential for TAN-N to accumulate during the day as feed is progressively metabolised. One can predict the maximum level that  TAN-N wil reach from two perspectives (starting the tank at a theoretical starting point of zero, or estimating residual TAN-N from the previous day post water exchange). Maximum daily water exchanges appear to be 55% of tank volume.
 
-``` {r nurseryTanksPredictedTan, fig.cap = "Sichon nursery tanks predicted TAN daily accumulation level (from daily starting point of zero mg/l TAN)", fig.align = "center", fig.dim = c(8,3), dpi = 200}
+``` {r nurseryTanksPredictedTan, fig.cap = "Sichon nursery tanks predicted maximum TAN level during culture period (from daily starting point of zero mg/l TAN)", fig.align = "center", fig.dim = c(8,3), dpi = 200}
 
 zone.labs <- c("Tanks A / B", "Tanks C / D")
 names(zone.labs) <- c("a_b", "c_d")
@@ -1925,13 +2015,13 @@ nursery.tanks.predicted.tan.p <- nursery.doc.nitrogen %>%
 nursery.tanks.predicted.tan.p
 ```
 
-Estimated maximum daily accumulation of TAN-N (if starting from zero TAN):  
-Tanks zone A/B `r nursery.tan.max[1,2] * 1e6 / (tanks_ab * 1000)` mg/l.  
-Tanks zone C/D `r nursery.tan.max[2,2] * 1e6 / (tanks_cd * 1000)` mg/l.  
+Estimated maximum daily accumulation of TAN-N (if starting with zero mg/l TAN):  
+Tanks zone A/B `r format(nursery.tan.max[1,2] * 1e6 / (tanks_ab * 1000), scientific = FALSE, digits = 3)` mg/l.  
+Tanks zone C/D `r format(nursery.tan.max[2,2] * 1e6 / (tanks_cd * 1000), scientific = FALSE, digits = 3)` mg/l.  
 
-Estimated maximum daily accumulation of TAN-N (if not starting from zero TAN):  
-Tanks zone A/B `r nursery.tan.max[1,2] * 1e6 / (tanks_ab * 1000) + 0.45 * (nursery.tan.max[1,2] * 1e6 / (tanks_ab * 1000))` mg/l.  
-Tanks zone C/D `r nursery.tan.max[2,2] * 1e6 / (tanks_cd * 1000) + 0.4 * (nursery.tan.max[2,2] * 1e6 / (tanks_cd * 1000))` mg/l.
+Estimated maximum daily accumulation of TAN-N (starting with residual TAN):  
+Tanks zone A/B `r format(nursery.tan.max[1,2] * 1e6 / (tanks_ab * 1000) + 0.45 * (nursery.tan.max[1,2] * 1e6 / (tanks_ab * 1000)), scientific = FALSE, digits = 3)` mg/l.  
+Tanks zone C/D `r format(nursery.tan.max[2,2] * 1e6 / (tanks_cd * 1000) + 0.4 * (nursery.tan.max[2,2] * 1e6 / (tanks_cd * 1000)), scientific = FALSE, digits = 3)` mg/l.
 
 ``` {r massBalanceParameters}
 
@@ -2014,7 +2104,7 @@ nursery.water.requirements.max <- nursery.water.requirements.grouped %>%
             max.model.water = max(model.water.sum))
 ```
 
-``` {r nurseryTanksModdeledWaterUse, fig.cap = "Sichon nursery tanks modelled water requirements based upon interpretation of production plan", fig.align = "center", fig.dim = c(8,3), dpi = 200}
+``` {r nurseryTanksModelledWaterUse, fig.cap = "Sichon nursery tanks modelled water requirements based upon interpretation of production plan", fig.align = "center", fig.dim = c(8,3), dpi = 200}
 
 nursery.water.requirements.p <- nursery.water.requirements.longer %>%
   filter(facility_day <= 100) %>%
@@ -2048,13 +2138,6 @@ The maturation department has been divided into a main area and E Zone. The main
 
 Male and female shrimp appear to be maintained in separate tanks M01-M08. Feed inputs have been supplied for ~ 6 month period which will be use to perform feed loading calculations for the department and model water consumption requirements.
 
-
-
-```{r maturationLayout, out.width = "85%", fig.cap = "Maturation Layout", fig.align = "center", fig.dim = c(8,3), dpi = 200}
-include_graphics("figs/maturation_layout.pdf") 
-```
-
-
 ### Feed types
 
 The information supplied indicates that the broodstock feed is comprised of sandworm and squid. Nutrient composition nor species specified, but assummed to be Perinereis nuntia and Loligo sp. Nutritional composition will be estimated from literature. Feeds are divided into five per day.
@@ -2076,11 +2159,69 @@ Taken from: R. Pratama and I Rostini 2021. Volatile components composition of fr
 
 ``` {r maturationFeedLoading}
 
+tanks_m <- 22
+
 maturation.feed.loading <- maturation.feed.input %>%
-  mutate(date = dmy(date))
+  mutate(date = dmy(date),
+         sw.protein = sw * 0.212 * 0.52,
+         squid.protein = squid * 0.141,
+         total.protein = sw.protein + squid.protein,
+         tan = total.protein * 0.144,
+         tan.mg.l = tan * 1e6 / (tanks_m * 1000),
+         model.exchange.rate = abs(tan * 1e6 / (tan.c2 - tan.c1) / 1000))
+
+maturation.water.requirement.grouped <- maturation.feed.loading %>%
+  group_by(date) %>%
+  summarise(water.exchange.sum = sum(model.exchange.rate))
 ```
 
+Based upon modelling feed inputs, the predicted water exchange requirements per tank are within the range of `r format(min(maturation.feed.loading$model.exchange.rate), scientific = FALSE, digits = 3)` to `r format(max(maturation.feed.loading$model.exchange.rate), scientific = FALSE, digits = 3)` m^3^ per day. For the production data supplied (2021 data, 8 tanks in operation), this indicates a daily water requirement of `r format(max(maturation.water.requirement.grouped$water.exchange.sum), scientific = FALSE, digits = 3)`. This does not include any additional demand from E Zone, spawning room or additional 8 broodstock tanks.
 
+The model predicts that tank TAN-N may reach a maximum of `r format(max(maturation.feed.loading$tan.mg.l),scientific = FALSE, digits = 3)` mg/l if starting the day at zero TAN-N. Since water exchange rates of 70% are typical, it is likely that residual TAN-N will accumulate to levels above this figure. This also helps to explain higher than expected levels of NO~2~, it is possible that residual TAN-N is being converted to NO~2~ by autotrophic bacterial metabolism and this is building up within the tanks due to insufficient water exchange.
+
+``` {r maturation2waterUse}
+
+maturation.2.loading <- tibble(sex = c("male", "female"),
+                               number = c(1600, 1600),
+                               abw = c(57.7, 57.5)) %>%
+  mutate(total.mass = number * abw / 1000,
+         worm = case_when(sex == "female" ~ total.mass * 0.09,
+                           sex == "male" ~ total.mass * 0.07),
+         squid = case_when(sex == "female" ~ total.mass * 0.08,
+                           sex == "male" ~ total.mass * 0.07)) %>%
+  pivot_longer(worm:squid, names_to = "feed", values_to = "total.feed") %>%
+  mutate(total.protein = case_when(feed == "worm" ~ total.feed * 0.212 * 0.52,
+                                   feed == "squid" ~ total.feed * 0.141))
+
+
+maturation.2.max.tan <- maturation.2.loading %>%
+  summarise(sum.protein = sum(total.protein)) %>%
+  mutate(tan = sum.protein * 0.144,
+         tan.mg.l = tan * 1e6 / (28.7 * 1000),
+         model.exchange.rate = abs(tan * 1e6 / (tan.c2 - tan.c1) / 1000))
+```
+
+# Summary
+
+## Water Use
+
+Water quality data indicate that water exchange-rates in livestock tanks are currently insufficient. The models of nursery and maturation departments indicated water requirements of up to `r nursery.water.requirements.max$max.model.water` m^3^/day and `r format(max(maturation.water.requirement.grouped$water.exchange.sum), scientific = FALSE, digits = 3)` m/^3^/day respectively. 
+
+The figure from maturation department was based on 8 from 16 tanks in use and does not include E Zone.
+
+Under the current operation  a theoretical minimum of ~ 2000 m^3^/day of treated seawater should be made available. This figure should be increased for contingency to 3000 m^3^/day, plus anticipated requirements for maturation 2 department. 
+
+Increasing water exchange will increase effluent volume - check with permit to determine if there is any limit. Discharge will be diluted, total waste transport unchanged.
+
+## Bacterial Counts
+
+With use of live feeds, it may be unrealistic to expect absence of bacteria within the system. However, bacterial counts regularly exceed the levels stipulated. Poor water quality conditions that induce a stress response within the shrimp may give opportunistic bacteria greater potential to multiply. 
+
+Increased water exchange may reduce this pressure.
+
+From the data there do not appear to be important mortality events. However, data has only been supplied for discrete periods of time. 
+
+Ideally, data would be recorded consistently to provide a long term dataset. Data acquisition, recording and storage should be designed in such a way to achieve monitoring targets. E.g. visualisation and analysis of specific variables.
 
 
 
@@ -2434,52 +2575,5 @@ set_caption(caption = as_paragraph("Sichon maturation tanks LB summary"),
   style = "Table Caption", 
   autonum = run_autonum(seq_id = "tab"))
 ```
-
-
-Summary data allows a quick visualisation for areas worth further investigation - pH looks OK, probably worth looking at values in maturation and leave it at that. Salinity variable - but not really a major issue for health. Alk - is that a typo, check the data type and see if it is an isolated figure. TAN - looks like a serious problem. This is where the focus is likely to be so far. Investigate tanks individually  - is it a common problem or isolated. Also plot detailed histogram for better visualisation of parameter distribution.
-
-## Example plot
-
-``` {r nurseryTank1tan, fig.cap = "TAN (mg/l) within Sichon nursery tank 1.", fig.align = "center", fig.dim = c(8,3), dpi = 200}
-
-tan.plot.nursery.1 <- water.quality23.join %>%
-  filter(department.x == "Nursery" & tank == "1") %>%
-  ggplot(aes(date, tan)) +
-  geom_line() +
-  geom_hline(yintercept = c(1, 3), linetype = c("dashed", "dotted"),
-             color = c("orange", "red"), size = 1.2) +
-  xlab("Date") +
-  ylab("TAN (mg/l)") +
-  theme_minimal()
-
-tan.plot.nursery.1
-```
-
-```{r tanDensityHistNursery, fig.cap = "Density histogram summarising frequency distribution of TAN (mg/l) as recorded in Sichon nursery.", fig.align = "center", fig.dim = c(8,3), dpi = 200}
-
-freqDistNurTAN <- tan.plot.nursery.1 <- water.quality23.join %>%
-  filter(department.x == "Nursery" & tank == "1") %>%
-  ggplot(aes(x=tan, )) +
-  geom_histogram(aes(y=..density..), binwidth = 0.5, alpha=0.4, position="identity") +
-  geom_density(alpha=0.2, bw = 0.5) +
-  geom_vline(xintercept = c(1, 3), linetype = c("dashed", "dotted"),
-             color = c("orange", "red"), size = 1.2) +
-  labs(x="TAN (mg/l)", y = "Frequency") +
-  theme_minimal()
-
-freqDistNurTAN
-```
-
-I wonder what time of day that the water quality readings are taken (just before the water exchange?)
-
-  
-  
-  
-  
-  
-
-
-
-
 
 

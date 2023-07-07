@@ -78,18 +78,31 @@ maturation.tanks <- unique(mtgvc$tank) %>%
 maturation.tanks.sub <- maturation.tanks[1:42]
 
 water.quality23.join %>%
-  filter(department.x == "Nursery" & tank == "10" & !is.na(no2)) %>%
-  ggplot(aes(date, no2)) +
-  geom_rect(aes(xmin = min(water.quality23.join$date), xmax = max(water.quality23.join$date), ymin = 0, ymax = 0.5),
+  filter(department.x == "Nursery" & tank == "1" & !is.na(nh3)) %>%
+  ggplot(aes(date, nh3)) +
+  geom_rect(aes(xmin = min(water.quality23.join$date), xmax = max(water.quality23.join$date), ymin = 0, ymax = 0.16),
             alpha = 1/5,
             fill = "lightgreen") +
-  geom_hline(yintercept = c(0.5, 0.8), linetype = c("dashed"),
+  geom_rect(aes(xmin = min(water.quality23.join$date), xmax = max(water.quality23.join$date), ymin = 0.3, ymax = Inf),
+                                            alpha = 1/5,
+                                            fill = "red") +
+  geom_hline(yintercept = c(0.16, 0.3), linetype = c("dashed"),
              color = c("orange"), size = 1.0) +
   geom_point() +
-  labs(x = "Date", y = expression(NO[2]~(mg/l))) +
+  labs(x = "Date", y = expression(NH[3]~(mg/l))) +
   theme_minimal()
 
+water.quality23.join %>%
+  filter(department.y == "Nursery" & tank == "1" & !is.na(gvc)) %>%
+  ggplot(aes(date, gvc)) +
+  geom_point(na.rm = TRUE) +
+  labs(x = "TAN", y = "GVC") +
+  theme_minimal()
 
+water.quality23.join %>%
+  filter(department.x == "Nursery") %>%
+  select(c(no2, gvc)) %>%
+  head(50)
 
-
+lm <- lm(log(gvc + 1) ~ nh3, data = water.quality23.join)
 
